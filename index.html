@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS DVA-C02 Prep Companion</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="sticky-head">
+<header class="site-header">
+  <div class="container">
+    <div class="brand">
+      <button id="logoHome" class="logo" title="Go to home">DVA</button>
+      <div>
+        <h1>AWS Certified Developer — Associate (DVA-C02)</h1>
+        <p class="tagline">30-day companion: study links, practice questions, cheat sheets &amp; hands-on labs</p>
+      </div>
+    </div>
+    <div class="progress-block">
+      <div class="progress-label"><span id="doneCount">0</span>/30 days done</div>
+      <div class="progress-track"><div id="progressBar" class="progress-fill"></div></div>
+      <button id="resetBtn" class="btn-ghost" title="Clear all progress">Reset progress</button>
+    </div>
+  </div>
+</header>
+
+<nav class="main-nav">
+  <div class="container">
+    <button class="nav-btn active" data-view="plan">30-Day Plan</button>
+    <button class="nav-btn" data-view="bank">Question Bank <span class="badge q-badge-count"></span></button>
+    <button class="nav-btn" data-view="cheatsheet">Exam-Day Cheat Sheet</button>
+  </div>
+</nav>
+</div>
+
+<main class="container">
+
+  <!-- PLAN VIEW -->
+  <section id="view-plan" class="view active">
+
+    <!-- Gaming HUD: XP bar + level + streak -->
+    <div class="game-hud">
+      <div class="hud-left">
+        <div class="hud-level-wrap">
+          <div class="hud-level-ring">
+            <span id="playerLevel" class="hud-level-text">LVL 1</span>
+          </div>
+        </div>
+        <div class="hud-xp-wrap">
+          <div class="hud-xp-label">
+            <span>EXPERIENCE</span>
+            <span id="xpText" class="hud-xp-num">0 / 30 days</span>
+          </div>
+          <div class="hud-xp-track">
+            <div id="xpBarFill" class="hud-xp-fill"></div>
+          </div>
+          <div class="hud-xp-sublabel">Level up every 5 days · 65-question exam · passing score 720/1000</div>
+        </div>
+      </div>
+      <div class="hud-right">
+        <div class="hud-stat-card">
+          <span class="hud-stat-icon">🔥</span>
+          <span class="hud-stat-value" id="streakCount">0</span>
+          <span class="hud-stat-label">Days Done</span>
+        </div>
+        <div class="hud-stat-card">
+          <span class="hud-stat-icon">⚡</span>
+          <span class="hud-stat-value" id="chapterCount">5</span>
+          <span class="hud-stat-label">Sections</span>
+        </div>
+        <div class="hud-stat-card">
+          <span class="hud-stat-icon">🎯</span>
+          <span class="hud-stat-value q-badge-count"></span>
+          <span class="hud-stat-label">Questions</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="planGrid" class="plan-milestone-grid"></div>
+  </section>
+
+  <!-- DAY DETAIL VIEW -->
+  <section id="view-day" class="view">
+    <div id="dayDetail"></div>
+  </section>
+
+  <!-- BANK VIEW -->
+  <section id="view-bank" class="view">
+    <div class="bank-toolbar bank-toolbar-sticky">
+      <select id="bankServiceFilter">
+        <option value="">All AWS services</option>
+      </select>
+      <button id="bankBadgeToggle" class="btn-toolbar-toggle">🏷 Hide Service</button>
+      <div class="bank-jump-group">
+        <input type="number" id="bankJump" placeholder="Q #" min="1" max="551">
+        <button id="bankJumpBtn" class="btn-jump">Go</button>
+      </div>
+    </div>
+
+    <div id="questionList" class="question-list"></div>
+  </section>
+
+  <!-- CHEAT SHEET VIEW -->
+  <section id="view-cheatsheet" class="view">
+    <div class="view-head">
+      <h2>Exam-Day Cheat Sheet</h2>
+      <p class="muted">One consolidated page for last-minute review — print it, save it, revise it the morning of the exam.</p>
+    </div>
+    <div id="cheatContent" class="cheat-content"></div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p>Sources: KodeKloud DVA notes · Stéphane Maarek slides (local PDF) · ExamTopics (mirrored) · AWS official docs. <span class="muted">Not affiliated with AWS. DVA-C02 is a trademark of Amazon Web Services.</span></p>
+  </div>
+</footer>
+
+<!-- Study note reader overlay -->
+<div id="noteReader" class="note-reader" hidden>
+  <div class="note-reader-bar">
+    <button class="back-btn" id="noteBack">← Back to plan</button>
+    <span id="noteTitle" class="note-reader-title"></span>
+  </div>
+  <div class="note-reader-body" id="noteBody"></div>
+</div>
+
+<!-- Answer Modal -->
+<div id="answerModalOverlay" class="modal-overlay"></div>
+<div id="answerModal" class="answer-modal">
+  <div class="modal-header">
+    <span class="modal-title">Explanation &amp; Discussion</span>
+    <button id="answerModalClose" class="modal-close" aria-label="Close">✕</button>
+  </div>
+  <div id="answerModalBody" class="modal-body"></div>
+</div>
+
+<script src="data/plan.js"></script>
+<script src="data/questions.js"></script>
+<script src="data/daynotes.js"></script>
+<script src="data/diagrams.js"></script>
+<script src="data/notion.js"></script>
+<script src="data/whitepapers.js"></script>
+<script src="data/enrich.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
