@@ -6,8 +6,8 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 45, "questions": 30, "handsOn": 25, "review": 20 },
     "studyLinks": [
-      { "label": "KodeKloud: Course Introduction", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Introduction/Course-Introduction/page.md", "note": "Read the whole page" },
-      { "label": "KodeKloud: Certification Details", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Introduction/Certification-Details/page.md", "note": "Know 4 domains and pass score (720/1000)" },
+      { "label": "KodeKloud: Course Introduction", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Introduction/Course-Introduction/page", "note": "Read the whole page" },
+      { "label": "KodeKloud: Certification Details", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Introduction/Certification-Details/page", "note": "Know 4 domains and pass score (720/1000)" },
       { "label": "Slides: Getting Started with AWS (p.11-21)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "Regions, AZs, POPS, shared responsibility" }
     ],
     "cheatSheet": [
@@ -37,9 +37,9 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 45, "questions": 30, "handsOn": 25, "review": 20 },
     "studyLinks": [
-      { "label": "KodeKloud: IAM Overview", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/IAM-Overview/page.md", "note": "Users, Groups, Roles, Policies" },
-      { "label": "KodeKloud: IAM Demo", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/IAM-Demo/page.md", "note": "Follow along in console" },
-      { "label": "KodeKloud: IAM Exam Tips", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/Exam-Tips/page.md", "note": "Must-read" },
+      { "label": "KodeKloud: IAM Overview", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/IAM-Overview/page", "note": "Users, Groups, Roles, Policies" },
+      { "label": "KodeKloud: IAM Demo", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/IAM-Demo/page", "note": "Follow along in console" },
+      { "label": "KodeKloud: IAM Exam Tips", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/Exam-Tips/page", "note": "Must-read" },
       { "label": "Slides: IAM (p.22-38)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "Users, groups, policies, MFA, password policy, access keys, credential report" }
     ],
     "cheatSheet": [
@@ -71,11 +71,11 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 45, "questions": 30, "handsOn": 25, "review": 20 },
     "studyLinks": [
-      { "label": "KodeKloud: Dynamic Policies", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/Dynamic-Policies/page.md", "note": "${aws:username} variables" },
-      { "label": "KodeKloud: Roles for AWS Services", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/Roles-for-AWS-Services/page.md", "note": "e.g. EC2 instance role, Lambda role" },
-      { "label": "KodeKloud: IAM PassRole", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/IAM-PassRole-for-AWS-Services/page.md", "note": "Exam favourite" },
-      { "label": "KodeKloud: STS (Security Token Service)", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/STSSecurity-Token-Service/page.md", "note": "AssumeRole, temporary creds" },
-      { "label": "KodeKloud: EC2 Instance Roles Demo", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/EC2-Instance-Roles-Demo/page.md", "note": "Follow along" },
+      { "label": "KodeKloud: Dynamic Policies", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/Dynamic-Policies/page", "note": "${aws:username} variables" },
+      { "label": "KodeKloud: Roles for AWS Services", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/Roles-for-AWS-Services/page", "note": "e.g. EC2 instance role, Lambda role" },
+      { "label": "KodeKloud: IAM PassRole", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/IAM-PassRole-for-AWS-Services/page", "note": "Exam favourite" },
+      { "label": "KodeKloud: STS (Security Token Service)", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/STSSecurity-Token-Service/page", "note": "AssumeRole, temporary creds" },
+      { "label": "KodeKloud: EC2 Instance Roles Demo", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Identity-and-Access-Management-IAM/EC2-Instance-Roles-Demo/page", "note": "Follow along" },
       { "label": "Slides: AWS CLI/SDK/IAM Roles (p.238-247)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "CLI credentials, SDK, instance metadata, credentials precedence" }
     ],
     "cheatSheet": [
@@ -107,10 +107,10 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 45, "questions": 30, "handsOn": 25, "review": 20 },
     "studyLinks": [
-      { "label": "KodeKloud: EC2 Pricing", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Elastic-Compute-CloudEC2/EC2-Pricing/page.md", "note": "On-demand, reserved, spot, dedicated" },
-      { "label": "KodeKloud: EC2 Placement", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Elastic-Compute-CloudEC2/EC2-Placement/page.md", "note": "Cluster/Spread/Partition" },
-      { "label": "KodeKloud: EC2 Userdata", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Elastic-Compute-CloudEC2/EC2-Userdata/page.md", "note": "Bootstrap scripts" },
-      { "label": "KodeKloud: EC2 Exam Tips", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Elastic-Compute-CloudEC2/Exam-Tips/page.md", "note": "Must-read" },
+      { "label": "KodeKloud: EC2 Pricing", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Elastic-Compute-CloudEC2/EC2-Pricing/page", "note": "On-demand, reserved, spot, dedicated" },
+      { "label": "KodeKloud: EC2 Placement", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Elastic-Compute-CloudEC2/EC2-Placement/page", "note": "Cluster/Spread/Partition" },
+      { "label": "KodeKloud: EC2 Userdata", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Elastic-Compute-CloudEC2/EC2-Userdata/page", "note": "Bootstrap scripts" },
+      { "label": "KodeKloud: EC2 Exam Tips", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Elastic-Compute-CloudEC2/Exam-Tips/page", "note": "Must-read" },
       { "label": "Slides: EC2 Basics (p.40-71)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "Types, SG, SSH, instance roles, AMI" }
     ],
     "cheatSheet": [
@@ -141,9 +141,9 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 45, "questions": 30, "handsOn": 25, "review": 20 },
     "studyLinks": [
-      { "label": "KodeKloud: EBS", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/EBS/page.md", "note": "Types, IOPS, durability" },
-      { "label": "KodeKloud: EBS Demo 1 & 2", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/EBS-Demo-1/page.md", "note": "Attach/mount volumes" },
-      { "label": "KodeKloud: Instance Store", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/Instance-Store/page.md", "note": "Ephemeral storage" },
+      { "label": "KodeKloud: EBS", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/EBS/page", "note": "Types, IOPS, durability" },
+      { "label": "KodeKloud: EBS Demo 1 & 2", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/EBS-Demo-1/page", "note": "Attach/mount volumes" },
+      { "label": "KodeKloud: Instance Store", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/Instance-Store/page", "note": "Ephemeral storage" },
       { "label": "Slides: EC2 Instance Storage (p.72-94)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "EBS, snapshots, AMI, RAID, EFS preview" }
     ],
     "cheatSheet": [
@@ -175,9 +175,9 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 45, "questions": 30, "handsOn": 25, "review": 20 },
     "studyLinks": [
-      { "label": "KodeKloud: EFS", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/EFS/page.md", "note": "NFS, mount targets, security groups" },
-      { "label": "KodeKloud: EFS Demo", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/EFS-Demo/page.md", "note": "Mount on 2 instances" },
-      { "label": "KodeKloud: EC2 Storage overview", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Elastic-Compute-CloudEC2/EC2-Storage/page.md", "note": "EBS vs EFS vs Instance Store" },
+      { "label": "KodeKloud: EFS", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/EFS/page", "note": "NFS, mount targets, security groups" },
+      { "label": "KodeKloud: EFS Demo", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/EFS-Demo/page", "note": "Mount on 2 instances" },
+      { "label": "KodeKloud: EC2 Storage overview", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Elastic-Compute-CloudEC2/EC2-Storage/page", "note": "EBS vs EFS vs Instance Store" },
       { "label": "Slides: EC2 Storage + CLI/SDK (p.72-94, 238-247)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "EFS, AWS CLI, SDK, credentials" }
     ],
     "cheatSheet": [
@@ -208,7 +208,7 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 30, "questions": 40, "handsOn": 40, "review": 10 },
     "studyLinks": [
-      { "label": "Re-read all Week 1 Exam Tips pages", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Introduction/Course-Introduction/page.md", "note": "IAM, EC2, Storage Exam Tips" },
+      { "label": "Re-read all Week 1 Exam Tips pages", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Introduction/Course-Introduction/page", "note": "IAM, EC2, Storage Exam Tips" },
       { "label": "AWS IAM docs: Best Practices", "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html", "note": "15 IAM best practices" },
       { "label": "Slides review: p.11-247 (skim)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "Skim for gaps" }
     ],
@@ -236,9 +236,9 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 45, "questions": 30, "handsOn": 25, "review": 20 },
     "studyLinks": [
-      { "label": "KodeKloud: S3 Review + Storage Classes", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Review-Storage-Classes/page.md", "note": "Classes + transition rules" },
-      { "label": "KodeKloud: S3 Storage Classes Demo", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Storage-Classes-Demo/page.md", "note": "Follow along" },
-      { "label": "KodeKloud: S3 Versioning", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Versioning/page.md", "note": "Versioning + delete markers" },
+      { "label": "KodeKloud: S3 Review + Storage Classes", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Review-Storage-Classes/page", "note": "Classes + transition rules" },
+      { "label": "KodeKloud: S3 Storage Classes Demo", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Storage-Classes-Demo/page", "note": "Follow along" },
+      { "label": "KodeKloud: S3 Versioning", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Versioning/page", "note": "Versioning + delete markers" },
       { "label": "Slides: S3 (p.213-237)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "Buckets, objects, classes, versioning, replication preview" }
     ],
     "cheatSheet": [
@@ -269,10 +269,10 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 45, "questions": 30, "handsOn": 25, "review": 20 },
     "studyLinks": [
-      { "label": "KodeKloud: S3 ACL and Resource Policies", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-ACL-and-Resource-Policies/page.md", "note": "Bucket policies vs ACLs" },
-      { "label": "KodeKloud: S3 Static Website Hosting", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Static-Website-Hosting/page.md", "note": "Website endpoints" },
-      { "label": "KodeKloud: S3 Access Points & Events", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Access-Points/page.md", "note": "Access Points + S3 Events" },
-      { "label": "KodeKloud: S3 Access Logs", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Access-Logs/page.md", "note": "Server access logging" },
+      { "label": "KodeKloud: S3 ACL and Resource Policies", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-ACL-and-Resource-Policies/page", "note": "Bucket policies vs ACLs" },
+      { "label": "KodeKloud: S3 Static Website Hosting", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Static-Website-Hosting/page", "note": "Website endpoints" },
+      { "label": "KodeKloud: S3 Access Points & Events", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Access-Points/page", "note": "Access Points + S3 Events" },
+      { "label": "KodeKloud: S3 Access Logs", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Access-Logs/page", "note": "Server access logging" },
       { "label": "Slides: S3 Advanced (p.248-260)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "Lifecycle, ACL, bucket policy, replication, events" }
     ],
     "cheatSheet": [
@@ -303,9 +303,9 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 45, "questions": 30, "handsOn": 25, "review": 20 },
     "studyLinks": [
-      { "label": "KodeKloud: S3 Encryption", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Encryption/page.md", "note": "SSE-S3, SSE-KMS, SSE-C, client-side" },
-      { "label": "KodeKloud: S3 Presigned URLs", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Pres-Signed-URLs/page.md", "note": "Grant temporary access" },
-      { "label": "KodeKloud: S3 Access Points", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Access-Points/page.md", "note": "Granular policy endpoints" },
+      { "label": "KodeKloud: S3 Encryption", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Encryption/page", "note": "SSE-S3, SSE-KMS, SSE-C, client-side" },
+      { "label": "KodeKloud: S3 Presigned URLs", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Pres-Signed-URLs/page", "note": "Grant temporary access" },
+      { "label": "KodeKloud: S3 Access Points", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Storage/S3-Access-Points/page", "note": "Granular policy endpoints" },
       { "label": "Slides: S3 Security (p.261-280)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "Encryption, presigned URLs, CORS, access logs, Glacier vault lock" }
     ],
     "cheatSheet": [
@@ -336,11 +336,11 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 45, "questions": 30, "handsOn": 25, "review": 20 },
     "studyLinks": [
-      { "label": "KodeKloud: ELB Overview", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Load-Balancing-AutoScaling/Elastic-LoadBalancer-Overview/page.md", "note": "3 LB types" },
-      { "label": "KodeKloud: Application Load Balancer", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Load-Balancing-AutoScaling/Application-Load-Balancer/page.md", "note": "Path & host routing" },
-      { "label": "KodeKloud: Network Load Balancer", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Load-Balancing-AutoScaling/Network-Load-Balancer/page.md", "note": "TCP/UDP, extreme performance" },
-      { "label": "KodeKloud: Sticky Sessions", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Load-Balancing-AutoScaling/Sticky-sessions/page.md", "note": "Cookie-based affinity" },
-      { "label": "KodeKloud: Auto Scaling Groups", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Load-Balancing-AutoScaling/Autoscaling-Groups-Overview/page.md", "note": "Launch templates, scaling policies" },
+      { "label": "KodeKloud: ELB Overview", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Load-Balancing-AutoScaling/Elastic-LoadBalancer-Overview/page", "note": "3 LB types" },
+      { "label": "KodeKloud: Application Load Balancer", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Load-Balancing-AutoScaling/Application-Load-Balancer/page", "note": "Path & host routing" },
+      { "label": "KodeKloud: Network Load Balancer", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Load-Balancing-AutoScaling/Network-Load-Balancer/page", "note": "TCP/UDP, extreme performance" },
+      { "label": "KodeKloud: Sticky Sessions", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Load-Balancing-AutoScaling/Sticky-sessions/page", "note": "Cookie-based affinity" },
+      { "label": "KodeKloud: Auto Scaling Groups", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Load-Balancing-AutoScaling/Autoscaling-Groups-Overview/page", "note": "Launch templates, scaling policies" },
       { "label": "Slides: High Availability (p.95-137)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "ELB types, target groups, ASG" }
     ],
     "cheatSheet": [
@@ -372,9 +372,9 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 45, "questions": 30, "handsOn": 25, "review": 20 },
     "studyLinks": [
-      { "label": "KodeKloud: AWS RDS Overview", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/AWS-RDS-Overview/page.md", "note": "Multi-AZ, replicas, backups" },
-      { "label": "KodeKloud: Aurora", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/Aurora/page.md", "note": "Aurora architecture" },
-      { "label": "KodeKloud: RDS Proxy", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/RDS-Proxy/page.md", "note": "Connection pooling for Lambda" },
+      { "label": "KodeKloud: AWS RDS Overview", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/AWS-RDS-Overview/page", "note": "Multi-AZ, replicas, backups" },
+      { "label": "KodeKloud: Aurora", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/Aurora/page", "note": "Aurora architecture" },
+      { "label": "KodeKloud: RDS Proxy", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/RDS-Proxy/page", "note": "Connection pooling for Lambda" },
       { "label": "Slides: RDS/Aurora/ElastiCache (p.138-164)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "RDS, read replicas, Aurora, ElastiCache" }
     ],
     "cheatSheet": [
@@ -405,10 +405,10 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 45, "questions": 30, "handsOn": 25, "review": 20 },
     "studyLinks": [
-      { "label": "KodeKloud: VPC Recap", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Networking-Fundamentals/VPC-Recap/page.md", "note": "VPC, CIDR, subnets" },
-      { "label": "KodeKloud: Internet Gateway & NAT Gateway", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Networking-Fundamentals/Internet-Gateway/page.md", "note": "Public vs private egress" },
-      { "label": "KodeKloud: Security Groups & NACLs", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Networking-Fundamentals/Security-Groups-NACLs/page.md", "note": "Stateful vs stateless" },
-      { "label": "KodeKloud: Networking Exam Tips", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Networking-Fundamentals/Exam-Tips/page.md", "note": "Must-read" },
+      { "label": "KodeKloud: VPC Recap", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Networking-Fundamentals/VPC-Recap/page", "note": "VPC, CIDR, subnets" },
+      { "label": "KodeKloud: Internet Gateway & NAT Gateway", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Networking-Fundamentals/Internet-Gateway/page", "note": "Public vs private egress" },
+      { "label": "KodeKloud: Security Groups & NACLs", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Networking-Fundamentals/Security-Groups-NACLs/page", "note": "Stateful vs stateless" },
+      { "label": "KodeKloud: Networking Exam Tips", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Networking-Fundamentals/Exam-Tips/page", "note": "Must-read" },
       { "label": "Slides: Route 53 + VPC (p.165-212)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "DNS, routing policies, VPC core" }
     ],
     "cheatSheet": [
@@ -438,10 +438,10 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 45, "questions": 30, "handsOn": 25, "review": 20 },
     "studyLinks": [
-      { "label": "KodeKloud: DynamoDB Overview", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-Overview/page.md", "note": "NoSQL, keys, capacity" },
-      { "label": "KodeKloud: DynamoDB Pricing & Throughput", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-Pricing-Throughput/page.md", "note": "RCU/WCU, on-demand vs provisioned" },
-      { "label": "KodeKloud: DynamoDB Indexes (GSI/LSI)", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-Indexes-GSI-LSI/page.md", "note": "Secondary indexes" },
-      { "label": "KodeKloud: DynamoDB API + CLI", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-API/page.md", "note": "PutItem, GetItem, Query, Scan" },
+      { "label": "KodeKloud: DynamoDB Overview", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-Overview/page", "note": "NoSQL, keys, capacity" },
+      { "label": "KodeKloud: DynamoDB Pricing & Throughput", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-Pricing-Throughput/page", "note": "RCU/WCU, on-demand vs provisioned" },
+      { "label": "KodeKloud: DynamoDB Indexes (GSI/LSI)", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-Indexes-GSI-LSI/page", "note": "Secondary indexes" },
+      { "label": "KodeKloud: DynamoDB API + CLI", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-API/page", "note": "PutItem, GetItem, Query, Scan" },
       { "label": "Slides: DynamoDB (p.602-655)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "Keys, capacity, indexes, API" }
     ],
     "cheatSheet": [
@@ -670,10 +670,10 @@ window.DVA_PLAN = [
     "minutes": 120,
     "session": { "study": 45, "questions": 30, "handsOn": 25, "review": 20 },
     "studyLinks": [
-      { "label": "KodeKloud: DynamoDB Conditional writes", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-Conditional-writes/page.md", "note": "ConditionExpression" },
-      { "label": "KodeKloud: DynamoDB Optimistic Locking", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-Optimistic-Locking/page.md", "note": "version attribute" },
-      { "label": "KodeKloud: DynamoDB Transactions", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-Transactions/page.md", "note": "TransactWriteItems" },
-      { "label": "KodeKloud: DynamoDB TTL", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-TTL/page.md", "note": "Auto-delete items" },
+      { "label": "KodeKloud: DynamoDB Conditional writes", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-Conditional-writes/page", "note": "ConditionExpression" },
+      { "label": "KodeKloud: DynamoDB Optimistic Locking", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-Optimistic-Locking/page", "note": "version attribute" },
+      { "label": "KodeKloud: DynamoDB Transactions", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-Transactions/page", "note": "TransactWriteItems" },
+      { "label": "KodeKloud: DynamoDB TTL", "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Databases/DynamoDB-TTL/page", "note": "Auto-delete items" },
       { "label": "Slides: DynamoDB (p.602-655)", "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf", "note": "Streams, TTL, DAX, transactions, conditional" }
     ],
     "cheatSheet": [
