@@ -96,6 +96,191 @@ window.DVA_PLAN = [
    415,
    468,
    510
+  ],
+  "keyTakeaways": [
+   {
+    "icon": "🔐",
+    "title": "Application Configuration vs Secrets",
+    "theory": "AWS splits runtime needs into two buckets. Non-sensitive configuration (URLs, feature flags, settings) lives in Systems Manager Parameter Store; sensitive values (passwords, API keys, DB credentials) live in Secrets Manager, which adds automatic rotation. Both are read through the same lightweight SDK call at startup — no extra application code. KMS only encrypts; it is not a place to fetch config from.",
+    "diagrams": [
+     {
+      "title": "Where each value lives",
+      "type": "fanout",
+      "from": "Your app — one SDK call at startup",
+      "to": [
+       "Parameter Store — config: URLs, flags, settings",
+       "Secrets Manager — secrets: passwords, keys, rotation"
+      ]
+     }
+    ],
+    "remember": "Parameter Store = configuration. Secrets Manager = secrets. KMS only encrypts — never a config source."
+   },
+   {
+    "icon": "🚀",
+    "title": "CodeDeploy Lifecycle Hooks",
+    "theory": "Every CodeDeploy deployment runs a fixed hook sequence split into two independent families. The application spine stops the old version, installs the new one, and starts it — ValidateService always runs LAST, after ApplicationStart, never mid-way. The traffic family (Blue/Green + traffic shifting) is a separate Before → Action → After pattern for blocking or allowing traffic. Don't merge the two families.",
+    "diagrams": [
+     {
+      "title": "Application hook spine (in-place & Auto Scaling)",
+      "type": "flow",
+      "steps": [
+       "ApplicationStop",
+       "DownloadBundle",
+       "BeforeInstall",
+       "Install",
+       "AfterInstall",
+       "ApplicationStart",
+       "ValidateService (LAST)"
+      ]
+     },
+     {
+      "title": "Traffic hook family (Blue/Green + shifting)",
+      "type": "flow",
+      "steps": [
+       "BeforeBlockTraffic",
+       "BlockTraffic",
+       "AfterBlockTraffic",
+       "BeforeAllowTraffic",
+       "AllowTraffic",
+       "AfterAllowTraffic"
+      ]
+     },
+     {
+      "title": "What runs, by deployment type",
+      "type": "stack",
+      "rows": [
+       ["In-place", "Application hooks + traffic hooks"],
+       ["Blue/Green new instances", "Application hooks + AllowTraffic family"],
+       ["Blue/Green original instances", "BlockTraffic family only"],
+       ["Rollback", "Traffic hooks fire again, reversed"]
+      ]
+     }
+    ],
+    "correction": "An earlier draft stated the wrong hook order. ValidateService is confirmed LAST — right after ApplicationStart, not before it.",
+    "remember": "STOP → INSTALL → START → VALIDATE. Traffic is always BLOCK → ALLOW."
+   },
+   {
+    "icon": "🌊",
+    "title": "Streaming Data: Kinesis vs Firehose vs SNS/SQS",
+    "theory": "When many independent consumers must read the SAME real-time stream in parallel — cheaply and at high volume — use Kinesis Data Streams: each consumer tracks its own position and reads independently. Firehose is a one-way delivery pipe to a single destination (S3, Redshift), not a multi-consumer read surface. SNS+SQS fanout also allows many consumers but needs one queue per consumer, adding cost and management at high volume.",
+    "diagrams": [
+     {
+      "title": "Many independent consumers, one stream",
+      "type": "fanout",
+      "from": "Kinesis Data Streams — millions of events",
+      "to": ["Consumer A", "Consumer B", "Consumer C"]
+     },
+     {
+      "title": "Pick the right service",
+      "type": "compare",
+      "cols": [
+       {
+        "head": "Kinesis Data Streams",
+        "tag": "many readers",
+        "items": ["Multiple independent consumers", "Real-time, high volume", "Each tracks its own position"]
+       },
+       {
+        "head": "Firehose",
+        "tag": "one destination",
+        "items": ["Delivery pipe only", "S3 / Redshift / OpenSearch", "Not multi-consumer"]
+       },
+       {
+        "head": "SNS + SQS",
+        "tag": "queue per consumer",
+        "items": ["Fanout works", "One queue each", "Overhead at scale"]
+       }
+      ]
+     }
+    ],
+    "remember": "One stream, many independent consumers, real-time, cheap → Kinesis Data Streams."
+   },
+   {
+    "icon": "🌍",
+    "title": "Multi-Region Deployment: CloudFormation StackSets",
+    "theory": "To deploy identical infrastructure across many Regions or accounts with no custom orchestration code, use CloudFormation StackSets: one template pushed centrally to a target list of Regions/accounts. A Lambda that triggers per-Region stack creation, or manually running create-stack per Region, reintroduces the custom code or manual repetition StackSets exist to remove.",
+    "diagrams": [
+     {
+      "title": "One template, many targets",
+      "type": "fanout",
+      "from": "CloudFormation template → StackSet",
+      "to": ["Region / Account A", "Region / Account B", "Region / Account C"]
+     }
+    ],
+    "remember": "StackSet = one template → many Regions/accounts, no custom code."
+   },
+   {
+    "icon": "⚙️",
+    "title": "Dynamic Configuration Without Redeploying: AWS AppConfig",
+    "theory": "When settings (limits, feature flags, thresholds) must change repeatedly WITHOUT redeploying or restarting the app, use AWS AppConfig. An agent alongside the app polls AppConfig for updated values. Rollout strategies (e.g. a canary percentage over a time window) apply changes gradually and auto-rollback on CloudWatch alarms. This differs from CodeDeploy, which ships application code, not live config values.",
+    "diagrams": [
+     {
+      "title": "Config updates without redeploy",
+      "type": "flow",
+      "steps": [
+       "AppConfig",
+       "Agent on ECS/EC2/Lambda",
+       "Live config value",
+       "Canary rollout %, auto-rollback on alarm"
+      ]
+     }
+    ],
+    "remember": "AppConfig = change configuration WITHOUT redeploying the application."
+   },
+   {
+    "icon": "🔑",
+    "title": "KMS Key Deletion Timing",
+    "theory": "Standard KMS keys cannot be deleted instantly — deletion requires a mandatory 7–30 day waiting window by design, to prevent accidental data loss. The only way to make a key unusable IMMEDIATELY, with AWS managing the infrastructure, is a customer-managed key with IMPORTED key material: deleting the imported material (crypto-shredding) disables the key at once.",
+    "diagrams": [
+     {
+      "title": "How fast can the key die?",
+      "type": "stack",
+      "rows": [
+       ["AWS-managed key", "No immediate deletion possible"],
+       ["Customer-managed key", "Delete → 7–30 day mandatory wait"],
+       ["Customer key + imported material", "Delete material → INSTANT (crypto-shred)"]
+      ]
+     }
+    ],
+    "remember": "Instant kill + no infra to manage → imported key material, delete the material."
+   },
+   {
+    "icon": "🌐",
+    "title": "AWS STS Endpoints and Latency",
+    "theory": "STS has one legacy global endpoint (sts.amazonaws.com, physically anchored in the US) plus a Regional endpoint in every Region. An app that calls the global endpoint pays cross-continent latency on every AssumeRole/GetSessionToken call. The fix is simply pointing the SDK at the Regional STS endpoint closest to the app — the auth method (SAML, web identity) does not change.",
+    "diagrams": [
+     {
+      "title": "Global vs Regional STS",
+      "type": "compare",
+      "cols": [
+       {
+        "head": "Global endpoint",
+        "tag": "slow",
+        "items": ["sts.amazonaws.com", "US-anchored", "Cross-continent latency", "Legacy default"]
+       },
+       {
+        "head": "Regional endpoint",
+        "tag": "fast",
+        "items": ["sts.<region>.amazonaws.com", "Closest to the app", "Low latency", "Recommended"]
+       }
+      ]
+     }
+    ],
+    "remember": "Regional app + STS latency → point the SDK at the Regional STS endpoint."
+   },
+   {
+    "icon": "📦",
+    "title": "Temporary Access + Auto-Cleanup: S3 Presigned URLs + Lifecycle",
+    "theory": "For files that must be temporarily accessible to a specific customer and auto-deleted after a retention window, with the LEAST operational overhead: store the object in S3 (any size, including >1 MB), hand out a presigned URL with a built-in expiration for temporary access, and attach an S3 Lifecycle rule to delete it after N days. No polling Lambda, cron job, or expiry database to manage — S3 handles both natively.",
+    "diagrams": [
+     {
+      "title": "Temporary access + auto-cleanup",
+      "type": "fanout",
+      "from": "Report object in S3 (encrypted, any size)",
+      "to": ["Presigned URL — expires in 8h", "Lifecycle rule — auto-delete after 2 days"]
+     }
+    ],
+    "remember": "Large file + temporary access + auto-delete → S3 + presigned URL + Lifecycle rule."
+   }
   ]
  },
  {

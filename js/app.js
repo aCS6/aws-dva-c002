@@ -282,11 +282,13 @@
         '<button class="tab-btn active" data-tab="study">📖 Study Links</button>' +
         '<button class="tab-btn" data-tab="questions">❓ Questions (' + qsForDay(day).length + ')</button>' +
         '<button class="tab-btn" data-tab="cheat">📝 Cheat Sheet</button>' +
+        ((day.keyTakeaways && day.keyTakeaways.length) ? '<button class="tab-btn" data-tab="takeaways">🎯 Key Takeaways (' + day.keyTakeaways.length + ')</button>' : '') +
         '<button class="tab-btn" data-tab="hands">🛠 Hands-On</button>' +
       '</div>' +
       '<div class="tab-panel active" id="tab-study">'     + studyPanel(day)     + '</div>' +
       '<div class="tab-panel" id="tab-questions">'        + questionsPanel(day) + '</div>' +
       '<div class="tab-panel" id="tab-cheat">'            + cheatPanel(day)     + '</div>' +
+      ((day.keyTakeaways && day.keyTakeaways.length) ? '<div class="tab-panel" id="tab-takeaways">' + takeawaysPanel(day) + '</div>' : '') +
       '<div class="tab-panel" id="tab-hands">'            + handsPanel(day)     + '</div>';
 
     $("#dayDetail").innerHTML = html;
@@ -363,6 +365,35 @@
       return '<div class="panel-card"><div class="empty-note">⚠️ No bank questions mapped to this topic yet.</div></div>';
     }
     return '<div class="panel-card"><p class="muted">' + qs.length + ' question(s) mapped. Click an option to answer.</p></div>' + questionCards(qs);
+  }
+
+  /* Key Takeaways — per-day exam-scenario notes: theory + infographic + trigger.
+     Diagrams reuse renderDiagram() so they match the app's infographic style. */
+  function takeawaysPanel(day) {
+    var items = day.keyTakeaways || [];
+    if (!items.length) {
+      return '<div class="panel-card"><div class="empty-note">No key takeaways for this day yet.</div></div>';
+    }
+    var html = '<div class="panel-card"><p class="muted">' + items.length +
+      ' exam-scenario takeaway(s) from this day. Each = short theory + an infographic + one trigger line to memorize.</p></div>';
+    items.forEach(function (t, idx) {
+      var diagrams = "";
+      (t.diagrams || []).forEach(function (d) {
+        diagrams += '<div class="diagram"><div class="diagram-title">' + esc(d.title || '') + '</div>' + renderDiagram(d) + '</div>';
+      });
+      html +=
+        '<div class="kt-topic">' +
+          '<div class="kt-head">' +
+            '<span class="kt-idx">' + (idx + 1) + '</span>' +
+            '<span class="kt-title">' + esc((t.icon ? t.icon + '  ' : '') + t.title) + '</span>' +
+          '</div>' +
+          (t.theory ? '<p class="kt-theory">' + esc(t.theory) + '</p>' : '') +
+          diagrams +
+          (t.correction ? '<div class="kt-note kt-correction"><b>Correction:</b> ' + esc(t.correction) + '</div>' : '') +
+          (t.remember   ? '<div class="kt-note kt-remember"><b>Remember:</b> ' + esc(t.remember) + '</div>' : '') +
+        '</div>';
+    });
+    return html;
   }
 
   function cheatPanel(day) {
