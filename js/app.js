@@ -501,6 +501,89 @@
      button.  The modal is explanation-only.
   ═══════════════════════════════════════════ */
 
+  /* ── Build the "explain this for me" prompt for an external LLM ── */
+  // Source text sometimes carries a literal "\n"; turn it into a real break.
+  function plain(s) { return String(s == null ? "" : s).replace(/\\n/g, "\n").trim(); }
+
+  function buildLLMPrompt(q, pickedLetter) {
+    var optionsText = (q.options || []).map(function (o) {
+      return o.letter + ". " + plain(o.text);
+    }).join("\n");
+
+    var answerPretty = String(q.answer || "").split("").join(", "); // "AC" -> "A, C"
+    var picked = pickedLetter || "";
+    var pickedNote = "";
+    if (picked) {
+      var wasRight = q.answer.indexOf(picked) !== -1;
+      pickedNote = "\nMY ANSWER: " + picked + " (" + (wasRight ? "correct" : "wrong") + ")";
+    }
+
+    return [
+      "You are my senior developer \"big brother\" — NOT a formal teacher. Talk to me in a light, friendly, encouraging tone, like you're helping your junior sibling pass the AWS Certified Developer – Associate (DVA-C02) exam. Keep it simple and human, cut the dry textbook language, but stay 100% technically precise.",
+      "",
+      "Here is an exam question I just answered:",
+      "",
+      "QUESTION:",
+      plain(q.question),
+      "",
+      "OPTIONS:",
+      optionsText,
+      "",
+      "CORRECT ANSWER (community-voted — NOT guaranteed correct): " + answerPretty + pickedNote,
+      "",
+      "IMPORTANT — trust nothing blindly:",
+      "The answer above comes from community voting on a dump site. Voting is NOT proof. If 100 people vote for a wrong option, the option is still wrong — wrong stays wrong. So do NOT just defend the voted answer.",
+      "First, independently work out the real answer yourself: use your own knowledge, reason from first principles, do web research, and check the official AWS documentation. THEN tell me the 100% correct answer with justification.",
+      "If your verified answer disagrees with the community-voted one, say so loudly, explain exactly why the voted answer is wrong, and give me the correct one instead.",
+      "",
+      "Do all of this for me:",
+      "1. VERDICT — State the truly correct answer (yours, after verification) and whether it matches the community-voted one. Cite the AWS doc / source that backs it.",
+      "2. PROBLEM — In plain words, what is this question really asking, and which AWS concept/service is being tested?",
+      "3. SOLUTION — Why is the correct answer right? Walk me through it step by step.",
+      "4. WHY THE OTHERS ARE WRONG — Go through EACH remaining option one by one and tell me the exact trap / reason it fails.",
+      "5. THE PATTERN — Give me the mental shortcut so next time this type of question is a baby-walk: which keywords or phrases in the question point straight to the answer? What's the give-away?",
+      "6. LOCK IT IN — If it helps, draw a simple ASCII diagram and/or give me a mnemonic so I never forget it.",
+      "",
+      "Make it exam-friendly and permanent — I should never get this category of question wrong again. Keep it tight, no fluff."
+    ].join("\n");
+  }
+
+  /* ── Copy text to clipboard, with a file:// / http fallback ── */
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function (resolve, reject) {
+      try {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.cssText = "position:fixed;top:-9999px;left:-9999px;";
+        document.body.appendChild(ta);
+        ta.select();
+        var ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        ok ? resolve() : reject(new Error("execCommand copy failed"));
+      } catch (e) { reject(e); }
+    });
+  }
+
+  /* ── Handle a "Copy for LLM" click: build prompt, copy, flash feedback ── */
+  function copyForLLM(q, pickedLetter, btn) {
+    copyToClipboard(buildLLMPrompt(q, pickedLetter)).then(function () {
+      var original = btn.innerHTML;
+      btn.classList.add("copied");
+      btn.innerHTML = "✅ Copied!";
+      setTimeout(function () {
+        btn.classList.remove("copied");
+        btn.innerHTML = original;
+      }, 1600);
+    }).catch(function () {
+      btn.innerHTML = "⚠️ Copy failed";
+      setTimeout(function () { btn.innerHTML = "📋 Copy for LLM"; }, 1600);
+    });
+  }
+
   /** Called when the user clicks an option button on a card */
   function submitInlineAnswer(card, q, pickedLetter) {
     // Prevent re-answering an already-answered card
@@ -526,9 +609,14 @@
         (isRight
           ? '<span class="q-inline-icon">✅</span> <strong>Correct!</strong> Answer: <strong>' + esc(q.answer) + '</strong>'
           : '<span class="q-inline-icon">❌</span> <strong>Wrong.</strong> Correct answer: <strong>' + esc(q.answer) + '</strong>') +
-        '<button class="btn-explanation" data-qnum="' + q.number + '" data-picked="' + escAttr(pickedLetter) + '">' +
-          '💬 Show Explanation' +
-        '</button>' +
+        '<span class="q-inline-actions">' +
+          '<button class="btn-copy-llm" data-qnum="' + q.number + '" data-picked="' + escAttr(pickedLetter) + '" title="Copy a detailed prompt to paste into ChatGPT / Claude">' +
+            '📋 Copy for LLM' +
+          '</button>' +
+          '<button class="btn-explanation" data-qnum="' + q.number + '" data-picked="' + escAttr(pickedLetter) + '">' +
+            '💬 Show Explanation' +
+          '</button>' +
+        '</span>' +
       '</div>';
 
     var optsDiv = card.querySelector(".q-options");
@@ -539,6 +627,14 @@
     if (explBtn) {
       explBtn.addEventListener("click", function () {
         openExplanationModal(q, pickedLetter);
+      });
+    }
+
+    // Wire the "Copy for LLM" button
+    var copyBtn = card.querySelector(".btn-copy-llm");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", function () {
+        copyForLLM(q, pickedLetter, copyBtn);
       });
     }
   }
