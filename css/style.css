@@ -826,6 +826,7 @@ body.reader-open { overflow: hidden; }
   border: 1px solid var(--border); border-radius: 10px; background: #fff;
   padding: 14px 16px; margin: 14px auto; max-width: 1400px;
   box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  color: #2a2620; /* dark base: white card must not inherit dark-theme light --text */
 }
 .diagram-title {
   font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
