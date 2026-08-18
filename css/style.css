@@ -449,6 +449,13 @@ code { background: var(--bg-3); padding: 1px 5px; border-radius: 4px; font-size:
 /* Cheat sheet page */
 .cheat-content .panel-card h3 { color: var(--accent); }
 .cheat-content .panel-card p { color: var(--muted); }
+.cheat-master { border-color: var(--accent); }
+.cheat-week-count { color: var(--muted); font-weight: 400; font-size: .8rem; }
+.cheat-day {
+  margin: 16px 0 4px; padding-left: 9px; font-size: .9rem; font-weight: 700;
+  color: var(--accent-3); border-left: 3px solid var(--accent-3);
+}
+.cheat-day:first-of-type { margin-top: 2px; }
 
 /* ════════════════════════════════════════════════════════════
    QUESTION CARDS

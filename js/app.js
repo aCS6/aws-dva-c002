@@ -116,12 +116,37 @@
      CHEAT SHEET
   ═══════════════════════════════════════════ */
   function renderCheatSheet() {
-    var d30 = PLAN[PLAN.length - 1];
-    var html = '<div class="panel-card"><h3>Last-minute review — ' + d30.title + '</h3>' +
-      '<p>Consolidated from all 30 daily cheat sheets.</p>' +
+    var master = PLAN[PLAN.length - 1];               // Day 30 = exam-day master sheet
+    var totalLines = PLAN.reduce(function (n, d) { return n + (d.cheatSheet || []).length; }, 0);
+
+    // Pinned master block (strategy, domain weights, keyword triggers, logistics).
+    var html = '<div class="panel-card cheat-master"><h3>Exam-day master sheet — ' + esc(master.title) + '</h3>' +
+      '<p>Your last-minute quick-recall sheet. The full ' + totalLines +
+      '-point roll-up from all 30 days follows below, grouped by week.</p>' +
       '<ul class="cheat-list">';
-    (d30.cheatSheet || []).forEach(function (line) { html += '<li>' + esc(line) + '</li>'; });
+    (master.cheatSheet || []).forEach(function (line) { html += '<li>' + esc(line) + '</li>'; });
     html += '</ul></div>';
+
+    // Roll up every other day's cheat lines, grouped by week.
+    var byWeek = {};
+    PLAN.forEach(function (d) {
+      if (d === master) return;                       // master already shown on top
+      (byWeek[d.week] = byWeek[d.week] || []).push(d);
+    });
+    Object.keys(byWeek).sort(function (a, b) { return a - b; }).forEach(function (wk) {
+      var days = byWeek[wk];
+      html += '<div class="panel-card"><h3>Week ' + wk +
+        ' <span class="cheat-week-count">· ' + days.length + ' days</span></h3>';
+      days.forEach(function (d) {
+        var lines = d.cheatSheet || [];
+        if (!lines.length) return;
+        html += '<h4 class="cheat-day">Day ' + d.day + ' · ' + esc(d.title) + '</h4>' +
+          '<ul class="cheat-list">';
+        lines.forEach(function (line) { html += '<li>' + esc(line) + '</li>'; });
+        html += '</ul>';
+      });
+      html += '</div>';
+    });
     $("#cheatContent").innerHTML = html;
   }
 

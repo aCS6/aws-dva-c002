@@ -123,12 +123,18 @@ const AUTH = {
       "NEVER hard-code access keys in code. On EC2/Lambda/ECS use IAM roles; the SDK picks up temporary creds automatically.",
       "CloudShell = browser shell with your console identity + AWS CLI pre-installed, 1 GB persistent /home, free.",
       "AWS SDK exists per language (JS v3 modular, boto3 for Python…). Retries with exponential backoff are built in; region must be set.",
-      "AWS CDK = define infra in real code (TS/Python) → synthesizes CloudFormation. `cdk synth` / `cdk deploy`. (Deep dive on Day 26.)"
+      "AWS CDK = define infra in real code (TS/Python) → synthesizes CloudFormation. `cdk synth` / `cdk deploy`. (Deep dive on Day 26.)",
+      "Region resolution order: explicit param → AWS_REGION env → profile's region in ~/.aws/config. No region set = error for most services.",
+      "List/query APIs cap results (e.g. S3 ListObjects = 1000 keys). Use paginators or loop on NextToken/ContinuationToken to get everything.",
+      "IAM Identity Center (SSO): `aws configure sso` sets up a profile; `aws sso login` refreshes the short-lived session creds.",
+      "CLI exit codes: 0 = success, 255 = error. In scripts use `set -euo pipefail` and check `$?` so a silent failure doesn't cascade."
     ],
     hands: [
       "Run `aws configure --profile dev` and set a region; then `aws sts get-caller-identity --profile dev`.",
       "List S3 buckets via CLI: `aws s3 ls`. Then the same call from an SDK snippet in CloudShell.",
-      "Inspect the credential chain: unset env keys, confirm CLI still works off the profile file."
+      "Inspect the credential chain: unset env keys, confirm CLI still works off the profile file.",
+      "Force full pagination: `aws s3api list-objects-v2 --bucket X --no-paginate` vs the default, and note the NextToken behaviour.",
+      "Set up a second identity with `aws configure sso` (or a `--profile`) and switch between the two in one shell."
     ]
   },
   11: {
@@ -138,7 +144,19 @@ const AUTH = {
       "Record types: A (IPv4), AAAA (IPv6), CNAME (alias to another name, NOT at zone apex), Alias (AWS-specific, free, works at apex → ELB/CloudFront/S3).",
       "Routing policies: Simple, Weighted, Latency, Failover (active/passive + health check), Geolocation, Geoproximity, Multivalue.",
       "Alias record beats CNAME for AWS resources: no charge, supports the zone apex (example.com).",
-      "Health checks can trigger DNS failover; CloudWatch alarms can back them."
+      "Health checks can trigger DNS failover; CloudWatch alarms can back them.",
+      "Failover routing needs a health check on the primary; on failure Route 53 serves the secondary (active/passive DR).",
+      "Weighted routing splits traffic by integer weights (e.g. 90/10) — DNS-level canary / blue-green.",
+      "Latency routing sends users to the Region with the lowest measured latency (not the nearest by distance).",
+      "Multivalue = up to 8 healthy records returned at random — poor-man's load balancing, not a substitute for an ELB.",
+      "Route 53 Resolver does hybrid DNS: inbound endpoints (on-prem → VPC) and outbound endpoints (VPC → on-prem)."
+    ],
+    hands: [
+      "Create a hosted zone for a test domain; add an A-Alias record pointing at an ELB or CloudFront distribution.",
+      "Add a weighted 90/10 pair on the same name; resolve repeatedly with `dig` and watch the split.",
+      "Configure a primary/secondary failover pair with a health check; disable the primary and confirm failover.",
+      "Try a CNAME at the zone apex (fails), then an Alias at the apex (works) — see why Alias exists.",
+      "Lower a record's TTL, change its target, and time how quickly resolvers pick up the new value."
     ]
   },
   19: {
@@ -149,7 +167,18 @@ const AUTH = {
       "EventBridge = event bus + rules (schedule or pattern match) → common Lambda trigger; replaces CloudWatch Events.",
       "Execution context is reused across invokes (warm start): init code + /tmp (512 MB–10 GB) persist. Put DB connections/SDK clients OUTSIDE the handler.",
       "Monitoring: Lambda auto-logs to CloudWatch Logs; enable X-Ray active tracing for latency breakdown. Key metrics: Throttles, Errors, Duration, IteratorAge, ConcurrentExecutions.",
-      "Exam trigger: 'process failed events' → DLQ/Destinations; 'run on a schedule' → EventBridge rule; 'reuse DB connection' → init outside handler."
+      "Exam trigger: 'process failed events' → DLQ/Destinations; 'run on a schedule' → EventBridge rule; 'reuse DB connection' → init outside handler.",
+      "SQS source: Lambda deletes messages only after the batch succeeds; on failure they reappear after the visibility timeout → set a redrive policy + DLQ on the QUEUE (not the function).",
+      "Kinesis/DynamoDB Streams: records are ordered per shard and a failing batch BLOCKS that shard until success or expiry → use BisectBatchOnFunctionError + MaximumRetryAttempts/RecordAge + an on-failure destination.",
+      "Reserved concurrency caps a function's max (protects downstream / other functions). Provisioned concurrency pre-warms instances to kill cold starts — it costs money even when idle.",
+      "Rising IteratorAge = you're falling behind the stream. Add shards, raise batch size, or speed up the function to catch up."
+    ],
+    hands: [
+      "Wire an S3 put-event → async Lambda; force an error and confirm 2 retries then delivery to an SQS DLQ.",
+      "Add a Lambda Destination (onFailure → SNS) and compare its payload richness against a plain DLQ message.",
+      "Create an EventBridge schedule rule (rate(5 minutes)) → Lambda; confirm periodic runs in CloudWatch Logs.",
+      "Move a DB/SDK client above the handler; log a timestamp in init vs handler to observe warm-start reuse.",
+      "Enable X-Ray active tracing, invoke a few times, and inspect the service map + subsegments."
     ]
   },
   21: {
@@ -160,7 +189,18 @@ const AUTH = {
       "Throttling: account-level 10,000 rps / 5,000 burst by default; per-method limits + Usage Plans + API Keys for per-client quotas/rate.",
       "CORS is enforced by the browser — enable it on the API (OPTIONS preflight + Access-Control-* headers). Common exam trap for 'works in Postman, fails in browser'.",
       "Stages (dev/prod) hold deployments; stage variables parametrize (e.g. Lambda alias). Canary release splits a % of traffic on a stage.",
-      "Import/export with OpenAPI (Swagger). Edge-optimized (CloudFront front) vs Regional vs Private endpoints."
+      "Import/export with OpenAPI (Swagger). Edge-optimized (CloudFront front) vs Regional vs Private endpoints.",
+      "Lambda authorizer returns an IAM policy (Allow/Deny) + principalId + optional context; cache the result by token for a TTL to cut authorizer invocations.",
+      "Cognito User Pool authorizer validates the pool JWT and rejects at the gateway before your integration ever runs — no custom code.",
+      "Mapping templates (VTL) reshape request/response for non-proxy integrations; Lambda-proxy integration passes the raw event through and expects a specific response shape.",
+      "Usage Plan + API Key ties a client to a rate/burst/quota; exceeding it returns 429 Too Many Requests."
+    ],
+    hands: [
+      "Add a Lambda authorizer to a method; call with and without a valid token and observe 403 vs 200.",
+      "Enable stage caching (TTL 60s); hit an endpoint twice and confirm the second response is served from cache.",
+      "Attach a Usage Plan + API Key with a tiny quota; exceed it and confirm the 429 response.",
+      "Enable CORS on a resource; call it from a browser page and confirm the OPTIONS preflight succeeds.",
+      "Create a canary on the prod stage (10% traffic) pointing at a new Lambda alias, then promote it after checks."
     ]
   }
 };
@@ -297,7 +337,10 @@ const plan = NEW.map(spec => {
   const kk = kkByDay[spec.d] || [];
   const auth = AUTH[spec.d] || {};
   const nonKK = (auth.links ? auth.links : inheritNonKK(spec.base)).filter(l => !isMonolithSlide(l));
-  const cheat = auth.cheat ? auth.cheat : inheritCheat(spec.base);
+  // Sanitize stale old-numbering refs inherited from source cheats (e.g. "…for Day 14 review"
+  // on the final day makes no sense). Leave valid forward-refs like "(Deep dive on Day 26.)".
+  const cheat = (auth.cheat ? auth.cheat : inheritCheat(spec.base))
+    .map(l => l.replace(/\bfor Day \d+ review\b/gi, "for your final review"));
   const hands = auth.hands ? auth.hands : inheritHands(spec.base);
   return {
     day: spec.d, week: spec.w, title: spec.title, module: spec.module,
