@@ -766,13 +766,15 @@
   ═══════════════════════════════════════════ */
   function questionCards(qs) {
     var html = "";
-    qs.forEach(function (q) {
-      html += '<div class="question-card" data-qnum="' + q.number + '">' + questionCardInner(q) + '</div>';
+    var total = qs.length;
+    qs.forEach(function (q, i) {
+      html += '<div class="question-card" data-qnum="' + q.number + '">' + questionCardInner(q, i + 1, total) + '</div>';
     });
     return html;
   }
 
-  function questionCardInner(q) {
+  // seq/total optional: page-local serial (1 of n). Origin Q# always shown.
+  function questionCardInner(q, seq, total) {
     var opts = "";
     (q.options || []).forEach(function (o) {
       opts +=
@@ -781,8 +783,12 @@
           '<span class="opt-text">' + fmt(o.text) + '</span>' +
         '</button>';
     });
+    var seqBadge = (seq && total)
+      ? '<span class="q-seq">' + seq + ' of ' + total + '</span>'
+      : '';
     return (
       '<div class="q-meta">' +
+        seqBadge +
         '<span class="q-num">Q' + q.number + '</span>' +
         '<span class="q-service">' + esc(q.service || '') + '</span>' +
       '</div>' +
