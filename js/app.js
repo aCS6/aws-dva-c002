@@ -563,11 +563,12 @@
       "**Answer:** <letter(s)> — say 'matches the community pick' OR 'community pick is WRONG, real answer is X'. Then ONE sentence (max 25 words) on why. State the answer once; never repeat it after this line.",
       "**Why:** 2-3 sentences on the core concept only. No fictional names, no worked-example story.",
       "**Traps:** one line per wrong option, format `X: <specific reason it fails, max 15 words>`.",
-      "**Memorize this:** exactly ONE takeaway — either a single trigger sentence, OR one short mnemonic, OR one small diagram (max 6 lines). Pick the single best one. Do NOT give more than one.",
+      "**Picture:** Include a small ASCII diagram ONLY if this concept is a flow, structure, or relationship (e.g. a request path, envelope encryption, VPC layout, token exchange, stream to consumer) — something a picture makes clearer. Max 8 lines, drawn ONCE. If the answer is a plain fact, limit, or single API call, write `Picture: (not needed here)` and move on. Do not force a diagram.",
+      "**Memorize this:** exactly ONE text takeaway — a single trigger sentence OR one short mnemonic (the diagram above is your visual, so keep this one verbal).",
       "",
       "HARD RULES — breaking these makes the answer useless to me:",
-      "- Whole reply UNDER 180 words. Shorter is better.",
-      "- At most ONE diagram in the entire reply, and only if it genuinely clarifies. Never redraw the same diagram.",
+      "- Keep the prose UNDER 180 words (the diagram lines do not count). Shorter is better.",
+      "- At most ONE diagram in the entire reply, in the Picture slot only. Never redraw the same diagram anywhere else.",
       "- No intro, no recap, no closing motivation. No repeating yourself. If you start repeating, stop.",
       "- Plain sentences over decoration. This is a quick-reference card, not an article."
     ].join("\n");
