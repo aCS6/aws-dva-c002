@@ -64,9 +64,9 @@ window.DVA_PLAN = [
     "note": ""
    },
    {
-    "label": "Slides: Getting Started with AWS (p.11-21)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Regions, AZs, POPS, shared responsibility"
+    "label": "Slides — Getting Started & Course Intro",
+    "url": "slides/01-intro.pdf",
+    "note": "21 slides · p1-21 of full deck"
    }
   ],
   "cheatSheet": [
@@ -143,9 +143,14 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: AWS CLI & SDK (p.238-247)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "CLI profiles, SDK credential chain"
+    "label": "Slides — AWS CLI & SDK",
+    "url": "slides/09-cli-sdk.pdf",
+    "note": "10 slides · p238-247 of full deck"
+   },
+   {
+    "label": "Slides — AWS CDK (Cloud Development Kit)",
+    "url": "slides/23-cdk.pdf",
+    "note": "12 slides · p745-756 of full deck"
    }
   ],
   "cheatSheet": [
@@ -207,9 +212,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: IAM (p.22-38)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Users, groups, policies, MFA, password policy, access keys, credential report"
+    "label": "Slides — IAM — Users, Groups, Policies",
+    "url": "slides/02-iam.pdf",
+    "note": "18 slides · p22-39 of full deck"
    }
   ],
   "cheatSheet": [
@@ -293,9 +298,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: AWS CLI/SDK/IAM Roles (p.238-247)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "CLI credentials, SDK, instance metadata, credentials precedence"
+    "label": "Slides — Advanced IAM & STS",
+    "url": "slides/25-iam-advanced.pdf",
+    "note": "21 slides · p805-825 of full deck"
    }
   ],
   "cheatSheet": [
@@ -390,9 +395,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: EC2 Basics (p.40-71)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Types, SG, SSH, instance roles, AMI"
+    "label": "Slides — Amazon EC2",
+    "url": "slides/03-ec2.pdf",
+    "note": "32 slides · p40-71 of full deck"
    }
   ],
   "cheatSheet": [
@@ -489,14 +494,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: EC2 Instance Storage (p.72-94)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "EBS, snapshots, AMI, RAID, EFS preview"
-   },
-   {
-    "label": "Slides: EC2 Storage + CLI/SDK (p.72-94, 238-247)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "EFS, AWS CLI, SDK, credentials"
+    "label": "Slides — EC2 Instance Storage — EBS, EFS, AMI",
+    "url": "slides/04-ec2-storage.pdf",
+    "note": "23 slides · p72-94 of full deck"
    }
   ],
   "cheatSheet": [
@@ -594,9 +594,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: S3 (p.213-237)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Buckets, objects, classes, versioning, replication preview"
+    "label": "Slides — Amazon S3 — Basics",
+    "url": "slides/08-s3.pdf",
+    "note": "25 slides · p213-237 of full deck"
    }
   ],
   "cheatSheet": [
@@ -692,9 +692,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: S3 Advanced (p.248-260)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Lifecycle, ACL, bucket policy, replication, events"
+    "label": "Slides — Amazon S3 — Advanced",
+    "url": "slides/10-s3-advanced.pdf",
+    "note": "13 slides · p248-260 of full deck"
    }
   ],
   "cheatSheet": [
@@ -790,9 +790,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: S3 Security (p.261-280)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Encryption, presigned URLs, CORS, access logs, Glacier vault lock"
+    "label": "Slides — Amazon S3 — Security & Encryption",
+    "url": "slides/11-s3-security.pdf",
+    "note": "20 slides · p261-280 of full deck"
    }
   ],
   "cheatSheet": [
@@ -967,9 +967,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: Route 53 + VPC (p.165-212)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "DNS, routing policies, VPC core"
+    "label": "Slides — Route 53 & VPC Networking",
+    "url": "slides/07-networking.pdf",
+    "note": "48 slides · p165-212 of full deck"
    }
   ],
   "cheatSheet": [
@@ -1026,9 +1026,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: Route 53 (p.165-190)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Routing policies, health checks"
+    "label": "Slides — Route 53 & VPC Networking",
+    "url": "slides/07-networking.pdf",
+    "note": "48 slides · p165-212 of full deck"
    }
   ],
   "cheatSheet": [
@@ -1115,9 +1115,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: High Availability (p.95-137)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "ELB types, target groups, ASG"
+    "label": "Slides — ELB & Auto Scaling",
+    "url": "slides/05-elb-asg.pdf",
+    "note": "43 slides · p95-137 of full deck"
    }
   ],
   "cheatSheet": [
@@ -1220,9 +1220,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: RDS/Aurora/ElastiCache (p.138-164)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "RDS, read replicas, Aurora, ElastiCache"
+    "label": "Slides — RDS, Aurora & ElastiCache",
+    "url": "slides/06-databases.pdf",
+    "note": "27 slides · p138-164 of full deck"
    }
   ],
   "cheatSheet": [
@@ -1327,9 +1327,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: DynamoDB (p.602-655)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Keys, capacity, indexes, API"
+    "label": "Slides — Amazon DynamoDB",
+    "url": "slides/19-dynamodb.pdf",
+    "note": "54 slides · p602-655 of full deck"
    }
   ],
   "cheatSheet": [
@@ -1439,9 +1439,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: DynamoDB (p.602-655)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Streams, TTL, DAX, transactions, conditional"
+    "label": "Slides — Amazon DynamoDB",
+    "url": "slides/19-dynamodb.pdf",
+    "note": "54 slides · p602-655 of full deck"
    }
   ],
   "cheatSheet": [
@@ -1540,6 +1540,11 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
+    "label": "Slides — Amazon CloudFront",
+    "url": "slides/12-cloudfront.pdf",
+    "note": "31 slides · p281-311 of full deck"
+   },
+   {
     "label": "AWS Docs: CloudFront developer guide (key concepts)",
     "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Introduction.html",
     "note": "Distributions, origins, cache behaviors"
@@ -1553,11 +1558,6 @@ window.DVA_PLAN = [
     "label": "AWS Docs: Signed URLs and Cookies",
     "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-signed-urls.html",
     "note": "Restrict access to content"
-   },
-   {
-    "label": "Slides: CloudFront (p.281-311)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Origins, S3 origin, caching, geo restriction, signed URLs, Lambda@Edge"
    }
   ],
   "cheatSheet": [
@@ -1658,6 +1658,11 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
+    "label": "Slides — AWS Lambda",
+    "url": "slides/18-lambda.pdf",
+    "note": "75 slides · p527-601 of full deck"
+   },
+   {
     "label": "AWS Docs: Lambda basics (execution environment, limits)",
     "url": "https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-concepts.html",
     "note": "Invocation model, limits"
@@ -1671,11 +1676,6 @@ window.DVA_PLAN = [
     "label": "AWS Docs: Lambda execution role",
     "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html",
     "note": "IAM role for permissions"
-   },
-   {
-    "label": "Slides: Lambda (p.514-601)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Sync/async invoke, versions, aliases, env vars, limits"
    }
   ],
   "cheatSheet": [
@@ -1791,6 +1791,11 @@ window.DVA_PLAN = [
     "label": "KodeKloud: Limits Concurrency Demo",
     "url": "https://notes.kodekloud.com/docs/AWS-Certified-Developer-Associate/Serverless/Limits-Concurrency-Demo/page",
     "note": "(demo — follow along)"
+   },
+   {
+    "label": "Slides — AWS Lambda",
+    "url": "slides/18-lambda.pdf",
+    "note": "75 slides · p527-601 of full deck"
    },
    {
     "label": "AWS Docs: Lambda concurrency",
@@ -1938,9 +1943,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: Lambda — events & integrations (p.560-601)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Destinations, DLQ, EventBridge"
+    "label": "Slides — AWS Lambda",
+    "url": "slides/18-lambda.pdf",
+    "note": "75 slides · p527-601 of full deck"
    }
   ],
   "cheatSheet": [
@@ -2038,6 +2043,11 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
+    "label": "Slides — Amazon API Gateway",
+    "url": "slides/20-apigateway.pdf",
+    "note": "44 slides · p656-699 of full deck"
+   },
+   {
     "label": "AWS Docs: API Gateway concepts",
     "url": "https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-basic-concept.html",
     "note": "REST vs HTTP vs WebSocket"
@@ -2051,11 +2061,6 @@ window.DVA_PLAN = [
     "label": "AWS Docs: API Gateway caching & throttling",
     "url": "https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-request-throttling.html",
     "note": "Cache, quotas, throttles"
-   },
-   {
-    "label": "Slides: API Gateway (p.656-699)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "REST/HTTP/WebSocket, mappings, auth, caching, throttling"
    }
   ],
   "cheatSheet": [
@@ -2187,9 +2192,9 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
-    "label": "Slides: API Gateway — security & deployment (p.678-699)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Auth, caching, throttling, stages"
+    "label": "Slides — Amazon API Gateway",
+    "url": "slides/20-apigateway.pdf",
+    "note": "44 slides · p656-699 of full deck"
    }
   ],
   "cheatSheet": [
@@ -2320,6 +2325,11 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
+    "label": "Slides — Integration & Messaging — SQS, SNS, Kinesis, Step Functions",
+    "url": "slides/16-messaging.pdf",
+    "note": "42 slides · p427-468 of full deck"
+   },
+   {
     "label": "AWS Docs: SQS standard vs FIFO",
     "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-basic-architecture.html",
     "note": "Ordering, exactly-once, DLQ"
@@ -2333,11 +2343,6 @@ window.DVA_PLAN = [
     "label": "AWS Docs: SNS + fanout",
     "url": "https://docs.aws.amazon.com/sns/latest/dg/sns-types-of-event-notifications.html",
     "note": "SNS→SQS, Lambda, email"
-   },
-   {
-    "label": "Slides: Integration & Messaging (p.427-468)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "SQS, SNS, Kinesis, Step Functions"
    }
   ],
   "cheatSheet": [
@@ -2445,6 +2450,16 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
+    "label": "Slides — Integration & Messaging — SQS, SNS, Kinesis, Step Functions",
+    "url": "slides/16-messaging.pdf",
+    "note": "42 slides · p427-468 of full deck"
+   },
+   {
+    "label": "Slides — Advanced & Misc — Nitro, MSK, Macie",
+    "url": "slides/27-advanced-misc.pdf",
+    "note": "23 slides · p870-892 of full deck"
+   },
+   {
     "label": "AWS Docs: Kinesis Data Streams basics",
     "url": "https://docs.aws.amazon.com/streams/latest/dev/key-concepts.html",
     "note": "Shards, records, retention"
@@ -2458,11 +2473,6 @@ window.DVA_PLAN = [
     "label": "AWS Docs: Step Functions patterns (sync/async/fan-out)",
     "url": "https://docs.aws.amazon.com/step-functions/latest/dg/amazon-states-language-sync-service.html",
     "note": "Express vs Standard, orchestration"
-   },
-   {
-    "label": "Slides: Integration & Messaging (p.455-468)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Kinesis, EDA, Step Functions"
    }
   ],
   "cheatSheet": [
@@ -2558,6 +2568,11 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
+    "label": "Slides — Containers — ECS, ECR, EKS, Fargate",
+    "url": "slides/13-containers.pdf",
+    "note": "42 slides · p312-353 of full deck"
+   },
+   {
     "label": "AWS Docs: ECS concepts",
     "url": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html",
     "note": "Clusters, tasks, services, Fargate"
@@ -2571,11 +2586,6 @@ window.DVA_PLAN = [
     "label": "AWS Docs: ECR basics",
     "url": "https://docs.aws.amazon.com/AmazonECR/latest/userguide/what-is-ecr.html",
     "note": "Private/public registries"
-   },
-   {
-    "label": "Slides: Containers on AWS (p.312-353)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "ECS, ECR, task defs, Fargate, EKS"
    }
   ],
   "cheatSheet": [
@@ -2697,6 +2707,16 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
+    "label": "Slides — Elastic Beanstalk",
+    "url": "slides/14-beanstalk.pdf",
+    "note": "25 slides · p354-378 of full deck"
+   },
+   {
+    "label": "Slides — AWS SAM (Serverless Application Model)",
+    "url": "slides/22-sam.pdf",
+    "note": "12 slides · p733-744 of full deck"
+   },
+   {
     "label": "AWS Docs: Elastic Beanstalk concepts",
     "url": "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/Welcome.html",
     "note": "Environment tiers, components"
@@ -2710,11 +2730,6 @@ window.DVA_PLAN = [
     "label": "AWS Docs: Beanstalk environments & configuration",
     "url": "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/concepts.html",
     "note": "EB CLI, .ebextensions"
-   },
-   {
-    "label": "Slides: Elastic Beanstalk (p.354-378)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Architecture, deployment modes"
    }
   ],
   "cheatSheet": [
@@ -2786,6 +2801,16 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
+    "label": "Slides — AWS CloudFormation",
+    "url": "slides/15-cloudformation.pdf",
+    "note": "48 slides · p379-426 of full deck"
+   },
+   {
+    "label": "Slides — AWS CDK (Cloud Development Kit)",
+    "url": "slides/23-cdk.pdf",
+    "note": "12 slides · p745-756 of full deck"
+   },
+   {
     "label": "AWS Docs: CloudFormation template reference",
     "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html",
     "note": "Sections + functions"
@@ -2799,11 +2824,6 @@ window.DVA_PLAN = [
     "label": "AWS Docs: stack updates & drift",
     "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks.html",
     "note": "Change sets, drift detection"
-   },
-   {
-    "label": "Slides: CloudFormation (p.379-426)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Template, stacks, functions, nested, change sets, SAM intro"
    }
   ],
   "cheatSheet": [
@@ -2977,6 +2997,11 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
+    "label": "Slides — CI/CD — CodeCommit, CodeBuild, CodeDeploy, CodePipeline",
+    "url": "slides/21-cicd.pdf",
+    "note": "33 slides · p700-732 of full deck"
+   },
+   {
     "label": "AWS Docs: CodePipeline overview",
     "url": "https://docs.aws.amazon.com/codepipeline/latest/userguide/welcome.html",
     "note": "Stages, actions, transitions"
@@ -2995,11 +3020,6 @@ window.DVA_PLAN = [
     "label": "AWS Docs: CodeCommit basics",
     "url": "https://docs.aws.amazon.com/codecommit/latest/userguide/welcome.html",
     "note": "Managed git repos"
-   },
-   {
-    "label": "Slides: CICD (p.700-732)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "CodeCommit/Build/Deploy/Pipeline + hook order"
    }
   ],
   "cheatSheet": [
@@ -3160,6 +3180,16 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
+    "label": "Slides — Amazon Cognito",
+    "url": "slides/24-cognito.pdf",
+    "note": "48 slides · p757-804 of full deck"
+   },
+   {
+    "label": "Slides — Security & Encryption — KMS, CloudHSM, SSM, Secrets Manager",
+    "url": "slides/26-security.pdf",
+    "note": "44 slides · p826-869 of full deck"
+   },
+   {
     "label": "AWS Docs: KMS concepts",
     "url": "https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html",
     "note": "CMKs, envelope encryption, key rotation"
@@ -3178,11 +3208,6 @@ window.DVA_PLAN = [
     "label": "AWS Docs: Cognito pools",
     "url": "https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html",
     "note": "User pools + identity pools"
-   },
-   {
-    "label": "Slides: Security sections (p.261-280, 151-164)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "S3 security, KMS, SSM, Secrets Manager, Cognito"
    }
   ],
   "cheatSheet": [
@@ -3269,6 +3294,11 @@ window.DVA_PLAN = [
     "note": "(demo — follow along)"
    },
    {
+    "label": "Slides — Monitoring — CloudWatch, X-Ray, CloudTrail",
+    "url": "slides/17-monitoring.pdf",
+    "note": "58 slides · p469-526 of full deck"
+   },
+   {
     "label": "AWS Docs: CloudWatch Logs",
     "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/WhatIsCloudWatchLogs.html",
     "note": "Log groups, streams, filters"
@@ -3284,11 +3314,6 @@ window.DVA_PLAN = [
     "note": "API activity audit"
    },
    {
-    "label": "Slides: Monitoring/Troubleshooting (p.469-513)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "CloudWatch, X-Ray, CloudTrail, health dashboards"
-   },
-   {
     "label": "AWS Docs: Error retries & exponential backoff",
     "url": "https://docs.aws.amazon.com/general/latest/gr/api-retries.html",
     "note": "SDK default retries"
@@ -3302,11 +3327,6 @@ window.DVA_PLAN = [
     "label": "AWS Docs: Lambda errors & throttling",
     "url": "https://docs.aws.amazon.com/lambda/latest/dg/invocation-retries.html",
     "note": "Async retries, DLQ, on-failure destinations"
-   },
-   {
-    "label": "Slides: Troubleshooting sections",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Retries, throttling, SDK patterns (p.427-468)"
    }
   ],
   "cheatSheet": [
@@ -3390,14 +3410,19 @@ window.DVA_PLAN = [
   },
   "studyLinks": [
    {
+    "label": "Slides — Exam Prep & Whitepapers",
+    "url": "slides/28-exam-prep.pdf",
+    "note": "12 slides · p893-904 of full deck"
+   },
+   {
+    "label": "Slides — Conclusion & Next Steps",
+    "url": "slides/29-conclusion.pdf",
+    "note": "3 slides · p905-907 of full deck"
+   },
+   {
     "label": "AWS IAM docs: Best Practices",
     "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html",
     "note": "15 IAM best practices"
-   },
-   {
-    "label": "Slides review: p.11-247 (skim)",
-    "url": "AWS%20Certified%20Developer%20Slides%20v45.pdf",
-    "note": "Skim for gaps"
    },
    {
     "label": "Use the Questions tab (all 50 available questions)",

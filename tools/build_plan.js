@@ -243,11 +243,60 @@ function qDay(svc){
 const qByDay = {}; for(let d=1; d<=30; d++) qByDay[d]=[];
 QS.slice().sort((a,b)=>a.number-b.number).forEach(q => qByDay[qDay(q.service||"AWS (General)")].push(q.number));
 
+/* ── per-section slide slices (see tools/split_slides.py — keep in sync) ── */
+const SLICES = {
+  intro:{f:"01-intro.pdf",label:"Getting Started & Course Intro",s:1,e:21,pg:21},
+  iam:{f:"02-iam.pdf",label:"IAM — Users, Groups, Policies",s:22,e:39,pg:18},
+  ec2:{f:"03-ec2.pdf",label:"Amazon EC2",s:40,e:71,pg:32},
+  "ec2-storage":{f:"04-ec2-storage.pdf",label:"EC2 Instance Storage — EBS, EFS, AMI",s:72,e:94,pg:23},
+  "elb-asg":{f:"05-elb-asg.pdf",label:"ELB & Auto Scaling",s:95,e:137,pg:43},
+  databases:{f:"06-databases.pdf",label:"RDS, Aurora & ElastiCache",s:138,e:164,pg:27},
+  networking:{f:"07-networking.pdf",label:"Route 53 & VPC Networking",s:165,e:212,pg:48},
+  s3:{f:"08-s3.pdf",label:"Amazon S3 — Basics",s:213,e:237,pg:25},
+  "cli-sdk":{f:"09-cli-sdk.pdf",label:"AWS CLI & SDK",s:238,e:247,pg:10},
+  "s3-advanced":{f:"10-s3-advanced.pdf",label:"Amazon S3 — Advanced",s:248,e:260,pg:13},
+  "s3-security":{f:"11-s3-security.pdf",label:"Amazon S3 — Security & Encryption",s:261,e:280,pg:20},
+  cloudfront:{f:"12-cloudfront.pdf",label:"Amazon CloudFront",s:281,e:311,pg:31},
+  containers:{f:"13-containers.pdf",label:"Containers — ECS, ECR, EKS, Fargate",s:312,e:353,pg:42},
+  beanstalk:{f:"14-beanstalk.pdf",label:"Elastic Beanstalk",s:354,e:378,pg:25},
+  cloudformation:{f:"15-cloudformation.pdf",label:"AWS CloudFormation",s:379,e:426,pg:48},
+  messaging:{f:"16-messaging.pdf",label:"Integration & Messaging — SQS, SNS, Kinesis, Step Functions",s:427,e:468,pg:42},
+  monitoring:{f:"17-monitoring.pdf",label:"Monitoring — CloudWatch, X-Ray, CloudTrail",s:469,e:526,pg:58},
+  lambda:{f:"18-lambda.pdf",label:"AWS Lambda",s:527,e:601,pg:75},
+  dynamodb:{f:"19-dynamodb.pdf",label:"Amazon DynamoDB",s:602,e:655,pg:54},
+  apigateway:{f:"20-apigateway.pdf",label:"Amazon API Gateway",s:656,e:699,pg:44},
+  cicd:{f:"21-cicd.pdf",label:"CI/CD — CodeCommit, CodeBuild, CodeDeploy, CodePipeline",s:700,e:732,pg:33},
+  sam:{f:"22-sam.pdf",label:"AWS SAM (Serverless Application Model)",s:733,e:744,pg:12},
+  cdk:{f:"23-cdk.pdf",label:"AWS CDK (Cloud Development Kit)",s:745,e:756,pg:12},
+  cognito:{f:"24-cognito.pdf",label:"Amazon Cognito",s:757,e:804,pg:48},
+  "iam-advanced":{f:"25-iam-advanced.pdf",label:"Advanced IAM & STS",s:805,e:825,pg:21},
+  security:{f:"26-security.pdf",label:"Security & Encryption — KMS, CloudHSM, SSM, Secrets Manager",s:826,e:869,pg:44},
+  "advanced-misc":{f:"27-advanced-misc.pdf",label:"Advanced & Misc — Nitro, MSK, Macie",s:870,e:892,pg:23},
+  "exam-prep":{f:"28-exam-prep.pdf",label:"Exam Prep & Whitepapers",s:893,e:904,pg:12},
+  conclusion:{f:"29-conclusion.pdf",label:"Conclusion & Next Steps",s:905,e:907,pg:3}
+};
+/* new-day → slide slice keys (rechecked against actual slide headings) */
+const SLIDE_DAYS = {
+  1:["intro"], 2:["cli-sdk","cdk"], 3:["iam"], 4:["iam-advanced"], 5:["ec2"], 6:["ec2-storage"],
+  7:["s3"], 8:["s3-advanced"], 9:["s3-security"], 10:["networking"], 11:["networking"], 12:["elb-asg"],
+  13:["databases"], 14:["dynamodb"], 15:["dynamodb"], 16:["cloudfront"], 17:["lambda"], 18:["lambda"],
+  19:["lambda"], 20:["apigateway"], 21:["apigateway"], 22:["messaging"], 23:["messaging","advanced-misc"],
+  24:["containers"], 25:["beanstalk","sam"], 26:["cloudformation","cdk"], 27:["cicd"],
+  28:["cognito","security"], 29:["monitoring"], 30:["exam-prep","conclusion"]
+};
+function slideLinksFor(day){
+  return (SLIDE_DAYS[day]||[]).map(function(k){
+    var s=SLICES[k];
+    return { label:"Slides — "+s.label, url:"slides/"+s.f, note:s.pg+" slides · p"+s.s+"-"+s.e+" of full deck" };
+  });
+}
+const isMonolithSlide = l => /Slides.*\.pdf/i.test(l.url||"");
+
 /* ── assemble new plan ── */
 const plan = NEW.map(spec => {
   const kk = kkByDay[spec.d] || [];
   const auth = AUTH[spec.d] || {};
-  const nonKK = auth.links ? auth.links : inheritNonKK(spec.base);
+  const nonKK = (auth.links ? auth.links : inheritNonKK(spec.base)).filter(l => !isMonolithSlide(l));
   const cheat = auth.cheat ? auth.cheat : inheritCheat(spec.base);
   const hands = auth.hands ? auth.hands : inheritHands(spec.base);
   return {
@@ -255,7 +304,7 @@ const plan = NEW.map(spec => {
     goal: spec.goal || (spec.base.length ? oldByNum[spec.base[0]].goal : ""),
     minutes: 120,
     session: { study:45, questions:30, handsOn:25, review:20 },
-    studyLinks: kk.concat(nonKK),
+    studyLinks: kk.concat(slideLinksFor(spec.d), nonKK),
     cheatSheet: cheat,
     handsOn: hands.length ? hands : (spec.base.length ? inheritHands(spec.base) : []),
     questionIds: qByDay[spec.d].sort((a,b)=>a-b)
