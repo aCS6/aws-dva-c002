@@ -544,7 +544,7 @@
     }
 
     return [
-      "You are my senior developer \"big brother\" — NOT a formal teacher. Talk to me in a light, friendly, encouraging tone, like you're helping your junior sibling pass the AWS Certified Developer – Associate (DVA-C02) exam. Keep it simple and human, cut the dry textbook language, but stay 100% technically precise.",
+      "You are a sharp AWS instructor helping me pass the DVA-C02 exam. I am short on time and under real pressure, so I need SIGNAL, not a lecture. Be calm, plain, and brief. No hype, no emoji spam, no pep talk, no storytelling.",
       "",
       "Here is an exam question I just answered:",
       "",
@@ -554,22 +554,22 @@
       "OPTIONS:",
       optionsText,
       "",
-      "CORRECT ANSWER (community-voted — NOT guaranteed correct): " + answerPretty + pickedNote,
+      "COMMUNITY-VOTED ANSWER (from a dump site — NOT guaranteed correct): " + answerPretty + pickedNote,
       "",
-      "IMPORTANT — trust nothing blindly:",
-      "The answer above comes from community voting on a dump site. Voting is NOT proof. If 100 people vote for a wrong option, the option is still wrong — wrong stays wrong. So do NOT just defend the voted answer.",
-      "First, independently work out the real answer yourself: use your own knowledge, reason from first principles, do web research, and check the official AWS documentation. THEN tell me the 100% correct answer with justification.",
-      "If your verified answer disagrees with the community-voted one, say so loudly, explain exactly why the voted answer is wrong, and give me the correct one instead.",
+      "VERIFY FIRST, SILENTLY: The voted answer can be wrong — voting is not proof, wrong stays wrong no matter how many vote for it. Before you reply, work out the real answer yourself from your AWS knowledge and the official docs. Do NOT narrate this step. Only cite a source if you need it to PROVE the community answer wrong.",
       "",
-      "Do all of this for me:",
-      "1. VERDICT — State the truly correct answer (yours, after verification) and whether it matches the community-voted one. Cite the AWS doc / source that backs it.",
-      "2. PROBLEM — In plain words, what is this question really asking, and which AWS concept/service is being tested?",
-      "3. SOLUTION — Why is the correct answer right? Walk me through it step by step.",
-      "4. WHY THE OTHERS ARE WRONG — Go through EACH remaining option one by one and tell me the exact trap / reason it fails.",
-      "5. THE PATTERN — Give me the mental shortcut so next time this type of question is a baby-walk: which keywords or phrases in the question point straight to the answer? What's the give-away?",
-      "6. LOCK IT IN — If it helps, draw a simple ASCII diagram and/or give me a mnemonic so I never forget it.",
+      "Then reply in EXACTLY this structure and nothing else:",
       "",
-      "Make it exam-friendly and permanent — I should never get this category of question wrong again. Keep it tight, no fluff."
+      "**Answer:** <letter(s)> — say 'matches the community pick' OR 'community pick is WRONG, real answer is X'. Then ONE sentence (max 25 words) on why. State the answer once; never repeat it after this line.",
+      "**Why:** 2-3 sentences on the core concept only. No fictional names, no worked-example story.",
+      "**Traps:** one line per wrong option, format `X: <specific reason it fails, max 15 words>`.",
+      "**Memorize this:** exactly ONE takeaway — either a single trigger sentence, OR one short mnemonic, OR one small diagram (max 6 lines). Pick the single best one. Do NOT give more than one.",
+      "",
+      "HARD RULES — breaking these makes the answer useless to me:",
+      "- Whole reply UNDER 180 words. Shorter is better.",
+      "- At most ONE diagram in the entire reply, and only if it genuinely clarifies. Never redraw the same diagram.",
+      "- No intro, no recap, no closing motivation. No repeating yourself. If you start repeating, stop.",
+      "- Plain sentences over decoration. This is a quick-reference card, not an article."
     ].join("\n");
   }
 
