@@ -30,6 +30,7 @@
     <button class="nav-btn active" data-view="plan">30-Day Plan</button>
     <button class="nav-btn" data-view="bank">Question Bank <span class="badge q-badge-count"></span></button>
     <button class="nav-btn" data-view="cheatsheet">Exam-Day Cheat Sheet</button>
+    <button class="nav-btn" data-view="mock">Mock Test <span class="badge mock-badge-count"></span></button>
   </div>
 </nav>
 </div>
@@ -109,6 +110,11 @@
     </div>
     <div id="cheatContent" class="cheat-content"></div>
   </section>
+
+  <!-- MOCK TEST VIEW -->
+  <section id="view-mock" class="view">
+    <div id="mockRoot" class="mock-root"></div>
+  </section>
 </main>
 
 <footer class="site-footer">
@@ -143,6 +149,8 @@
 <script src="data/notion.js"></script>
 <script src="data/whitepapers.js"></script>
 <script src="data/enrich.js"></script>
+<script src="data/mocktests.js"></script>
 <script src="js/app.js"></script>
+<script src="js/mock.js"></script>
 </body>
 </html>
