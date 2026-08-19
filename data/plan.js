@@ -366,6 +366,254 @@ window.DVA_PLAN = [
    416,
    470,
    516
+  ],
+  "keyTakeaways": [
+   {
+    "icon": "🔐",
+    "title": "Private Downloads at Global Scale",
+    "theory": "Firmware/software downloads that must be private AND global: store the files in S3 and serve them through CloudFront with signed URLs. A signed URL controls WHO may download and FOR HOW LONG (time-limited), while CloudFront adds global caching at low cost — with no extra application tier. Lambda@Edge, API Gateway, or one distribution per customer all add cost or complexity you don't need.",
+    "diagrams": [
+     {
+      "title": "Secure global download path",
+      "type": "flow",
+      "steps": [
+       {
+        "t": "Customer",
+        "role": "key"
+       },
+       "CloudFront + signed URL (expires)",
+       {
+        "t": "Amazon S3 — private firmware",
+        "role": "win"
+       }
+      ]
+     },
+     {
+      "title": "Answer vs traps",
+      "type": "stack",
+      "rows": [
+       ["✅ A — CloudFront + signed URLs", "secure, global, lowest cost", "win"],
+       ["B — one Distribution per customer", "costly + hard to operate", "trap"],
+       ["C — CloudFront + Lambda@Edge", "overkill for signed-URL auth", "trap"],
+       ["D — API Gateway + Lambda", "extra layer + compute cost", "trap"]
+      ]
+     }
+    ],
+    "correction": "You picked C (Lambda@Edge). Correct = A. A signed URL already authorises the download — Lambda@Edge only adds cost for logic you don't need here.",
+    "remember": "Secure private downloads + global delivery = CloudFront + signed URLs (S3 origin)."
+   },
+   {
+    "icon": "🚀",
+    "title": "Fast Serverless Iteration: sam sync",
+    "theory": "For a tight build-test loop on serverless, sam sync pushes ONLY the changed resources to AWS instead of redeploying the whole stack on every commit — it is built for accelerated development. The decoys are real commands that do other jobs; know what each actually does.",
+    "diagrams": [
+     {
+      "title": "sam sync loop",
+      "type": "flow",
+      "steps": [
+       {
+        "t": "Code change",
+        "role": "key"
+       },
+       "sam sync",
+       "only CHANGED resources",
+       {
+        "t": "AWS — test in seconds",
+        "role": "win"
+       }
+      ]
+     },
+     {
+      "title": "What each command actually does",
+      "type": "compare",
+      "cols": [
+       {
+        "head": "sam sync",
+        "tag": "✅ deploy incremental",
+        "items": ["syncs only changed resources", "rapid dev/test loop"],
+        "tone": "win"
+       },
+       {
+        "head": "sam init",
+        "items": ["scaffolds a NEW app", "no deploy"],
+        "tone": "trap"
+       },
+       {
+        "head": "cdk synth",
+        "items": ["emits a CFN template", "no deploy"],
+        "tone": "trap"
+       },
+       {
+        "head": "cdk bootstrap",
+        "items": ["preps env for CDK", "no deploy"],
+        "tone": "trap"
+       }
+      ]
+     }
+    ],
+    "correction": "You picked D (cdk bootstrap). bootstrap only prepares an environment for CDK — it deploys nothing. The incremental-deploy answer is sam sync (A).",
+    "remember": "Serverless dev speed = sam sync (pushes only changed resources)."
+   },
+   {
+    "icon": "🔑",
+    "title": "Hide an API Key: Public REST API + HTTP Integration",
+    "theory": "A public single-page app must call a third-party API that needs a secret key in a header — but the key must never reach the browser. API Gateway holds the key server-side: a PUBLIC REST API with a direct HTTP integration injects the key into the integration request headers before forwarding. No Lambda needed = cheapest. 'Private' REST APIs are for VPC-only clients, so they don't fit a public browser app.",
+    "diagrams": [
+     {
+      "title": "Key stays server-side",
+      "type": "flow",
+      "steps": [
+       {
+        "t": "Browser (public SPA)",
+        "role": "key"
+       },
+       {
+        "t": "API Gateway REST API + secret header",
+        "role": "win"
+       },
+       "Third-party HTTP API"
+      ]
+     },
+     {
+      "title": "Answer vs traps",
+      "type": "stack",
+      "rows": [
+       ["✅ C — Public REST API + HTTP integration", "key hidden, no compute cost", "win"],
+       ["A — PRIVATE REST API + HTTP integration", "private ≠ public browser access", "trap"],
+       ["B — Private + Lambda proxy", "private + needless compute", "trap"],
+       ["D — Public + Lambda proxy", "works, but extra Lambda cost", "trap"]
+      ]
+     }
+    ],
+    "remember": "Hide a key behind a simple forward = public API Gateway REST API, HTTP integration, no Lambda."
+   },
+   {
+    "icon": "🔗",
+    "title": "SQS → Enrich → Target, Least Code: EventBridge Pipes",
+    "theory": "Point-to-point 'take from a source, optionally enrich, hand to a target' is exactly what EventBridge Pipes do — with no code to write for polling or orchestration. Source = the SQS queue, a built-in enrichment step, target = the fulfillment system. Lambda+SNS, Step Functions, or EMR all add moving parts and development effort.",
+    "diagrams": [
+     {
+      "title": "The Pipe does it all",
+      "type": "flow",
+      "steps": [
+       {
+        "t": "SQS queue (orders)",
+        "role": "key"
+       },
+       {
+        "t": "EventBridge Pipe — Enrichment step",
+        "role": "win"
+       },
+       "Fulfillment system"
+      ]
+     },
+     {
+      "title": "Answer vs traps (by effort)",
+      "type": "stack",
+      "rows": [
+       ["✅ D — EventBridge Pipe", "source → enrich → target, least code", "win"],
+       ["A — Lambda poll + SNS", "custom polling + extra infra", "trap"],
+       ["B — Step Functions + Lambda", "orchestration overhead", "trap"],
+       ["C — EMR cluster", "a cluster for simple enrich = overkill", "trap"]
+      ]
+     }
+    ],
+    "remember": "SQS → transform/enrich → target with minimal code = EventBridge Pipes."
+   },
+   {
+    "icon": "📱",
+    "title": "Mobile MFA = Cognito User Pool + Enable MFA (choose TWO)",
+    "theory": "App end-user authentication with MFA is a Cognito User Pool job, and it takes TWO steps: (A) create the user pool and its users, and (C) turn on MFA for that pool. MFA is a pool setting, not something you hand-code with SNS. IAM users are for AWS resource access, not app end-users — a classic decoy.",
+    "diagrams": [
+     {
+      "title": "Two steps — both required",
+      "type": "fanout",
+      "from": {
+       "t": "Mobile app users need MFA",
+       "role": "key"
+      },
+      "to": [
+       {
+        "t": "Step A — create Cognito User Pool + users",
+        "role": "win"
+       },
+       {
+        "t": "Step C — enable MFA on the pool",
+        "role": "win"
+       }
+      ]
+     },
+     {
+      "title": "Right identity service",
+      "type": "compare",
+      "cols": [
+       {
+        "head": "Cognito User Pool",
+        "tag": "app end-users",
+        "items": ["sign-up / sign-in", "built-in MFA toggle"],
+        "tone": "win"
+       },
+       {
+        "head": "IAM users",
+        "tag": "AWS resource access",
+        "items": ["not for app end-users"],
+        "tone": "trap"
+       },
+       {
+        "head": "Manual SNS codes",
+        "tag": "hand-rolled",
+        "items": ["bypasses built-in MFA"],
+        "tone": "trap"
+       }
+      ]
+     }
+    ],
+    "correction": "'Choose TWO' — the answer is A AND C. You selected only C; enabling MFA (C) needs the pool to exist first (A). Always match the number of picks the question asks for.",
+    "remember": "App users + MFA = Cognito User Pool (A) + enable MFA (C). Two steps."
+   },
+   {
+    "icon": "⚡",
+    "title": "Massive Scale + Low Latency + Key Queries = DynamoDB",
+    "theory": "Time-series readings that must scale with zero downtime and serve low-latency 'current + historical' lookups per location = DynamoDB. Model location ID as the partition key and timestamp as the sort key: that composite key answers both 'latest reading' and 'range over time' fast. RDS needs capacity management, ElastiCache is a cache (not a durable store), and S3+Athena is for analytics — not on-demand low latency.",
+    "diagrams": [
+     {
+      "title": "Composite key design",
+      "type": "keymap",
+      "table": "Smart-meter readings",
+      "pk": "Location ID",
+      "sk": "Timestamp",
+      "out": ["Current usage — point lookup", "Historical usage — range query"]
+     },
+     {
+      "title": "Right store for the job",
+      "type": "compare",
+      "cols": [
+       {
+        "head": "DynamoDB",
+        "tag": "✅ scale + low latency",
+        "items": ["auto-scales, no downtime", "key-based current & historical"],
+        "tone": "win"
+       },
+       {
+        "head": "RDS",
+        "items": ["capacity to manage", "weaker for huge time-series"],
+        "tone": "trap"
+       },
+       {
+        "head": "ElastiCache",
+        "items": ["cache, not a durable source"],
+        "tone": "trap"
+       },
+       {
+        "head": "S3 + Athena",
+        "items": ["analytics, not low latency"],
+        "tone": "trap"
+       }
+      ]
+     }
+    ],
+    "remember": "Huge scale + low latency + key queries = DynamoDB (PK = location, SK = timestamp)."
+   }
   ]
  },
  {

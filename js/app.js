@@ -418,19 +418,30 @@
   /* ═══════════════════════════════════════════
      DIAGRAM RENDERER
   ═══════════════════════════════════════════ */
+  // A node may be a plain string, or {t, role} where role ∈ win|trap|key
+  // to colour-code it (green answer / red trap / accent trigger).
+  function roleClass(role) {
+    return role === "win" ? " is-win" : role === "trap" ? " is-trap" : role === "key" ? " is-key" : "";
+  }
+  function nodeHTML(n, extra) {
+    var text = (n && typeof n === "object") ? n.t : n;
+    var cls = "d-node" + (extra || "") + (n && typeof n === "object" ? roleClass(n.role) : "");
+    return '<div class="' + cls + '">' + esc(text) + '</div>';
+  }
+
   function renderDiagram(d) {
     var out = "";
     if (d.type === "flow") {
       out = '<div class="d-flow">';
       d.steps.forEach(function (s, i) {
         if (i) out += '<div class="d-arrow">→</div>';
-        out += '<div class="d-node">' + esc(s) + '</div>';
+        out += nodeHTML(s);
       });
       out += '</div>';
     } else if (d.type === "compare") {
       out = '<div class="d-compare">';
       d.cols.forEach(function (c) {
-        out += '<div class="d-col"><div class="d-col-head">' + esc(c.head) + '</div>';
+        out += '<div class="d-col' + roleClass(c.tone) + '"><div class="d-col-head">' + esc(c.head) + '</div>';
         if (c.tag) out += '<div class="d-col-tag">' + esc(c.tag) + '</div>';
         out += '<ul class="d-items">';
         c.items.forEach(function (i) { out += '<li>' + esc(i) + '</li>'; });
@@ -438,14 +449,31 @@
       });
       out += '</div>';
     } else if (d.type === "fanout") {
-      out = '<div class="d-fanout"><div class="d-node d-src">' + esc(d.from) + '</div>' +
+      out = '<div class="d-fanout">' + nodeHTML(d.from, " d-src") +
         '<div class="d-fanmid">⇊</div><div class="d-fanto">';
-      d.to.forEach(function (t) { out += '<div class="d-node">' + esc(t) + '</div>'; });
+      d.to.forEach(function (t) { out += nodeHTML(t); });
       out += '</div></div>';
+    } else if (d.type === "keymap") {
+      // DynamoDB-style hero: partition key + sort key → outputs
+      out = '<div class="d-keymap">';
+      if (d.table) out += '<div class="d-km-table">' + esc(d.table) + '</div>';
+      out += '<div class="d-km-keys">' +
+        '<div class="d-km-key d-km-pk"><span class="d-km-role">Partition key</span>' +
+          '<span class="d-km-val">' + esc(d.pk) + '</span></div>' +
+        '<div class="d-km-plus">+</div>' +
+        '<div class="d-km-key d-km-sk"><span class="d-km-role">Sort key</span>' +
+          '<span class="d-km-val">' + esc(d.sk) + '</span></div>' +
+        '</div>';
+      if (d.out && d.out.length) {
+        out += '<div class="d-fanmid">⇊</div><div class="d-km-out">';
+        d.out.forEach(function (o) { out += '<div class="d-node is-win">' + esc(o) + '</div>'; });
+        out += '</div>';
+      }
+      out += '</div>';
     } else if (d.type === "stack") {
       out = '<div class="d-stack">';
       d.rows.forEach(function (r) {
-        out += '<div class="d-layer"><div class="d-layer-name">' + esc(r[0]) + '</div>' +
+        out += '<div class="d-layer' + roleClass(r[2]) + '"><div class="d-layer-name">' + esc(r[0]) + '</div>' +
           '<div class="d-layer-note">' + esc(r[1] || '') + '</div></div>';
       });
       out += '</div>';
