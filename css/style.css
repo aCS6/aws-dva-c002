@@ -98,6 +98,42 @@ code { background: var(--bg-3); padding: 1px 5px; border-radius: 4px; font-size:
 }
 .nav-btn:hover { color: var(--text); }
 .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Mock Test — attention-drawing animated pill */
+.nav-btn[data-view="mock"] {
+  position: relative; overflow: hidden;
+  align-self: center;
+  color: #fff; font-weight: 700;
+  padding: 7px 14px 7px 12px;
+  border: 1px solid var(--accent); border-radius: 8px;
+  background: linear-gradient(135deg, rgba(240,138,36,.24), rgba(240,138,36,.05));
+  animation: mockPulse 2.4s ease-in-out infinite;
+}
+.nav-btn[data-view="mock"]::before { content: "⚡ "; }
+.nav-btn[data-view="mock"]::after {
+  content: ""; position: absolute; top: 0; left: -60%; width: 45%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.38), transparent);
+  transform: skewX(-18deg); pointer-events: none;
+  animation: mockSheen 3.4s ease-in-out infinite;
+}
+.nav-btn[data-view="mock"]:hover {
+  color: #fff;
+  background: linear-gradient(135deg, rgba(240,138,36,.36), rgba(240,138,36,.12));
+}
+.nav-btn[data-view="mock"] .badge { background: rgba(0,0,0,.28); color: #fff; }
+@keyframes mockPulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(240,138,36,.45), 0 0 8px rgba(240,138,36,.30); }
+  50%      { box-shadow: 0 0 0 1px rgba(240,138,36,.90), 0 0 17px rgba(240,138,36,.65); }
+}
+@keyframes mockSheen {
+  0%   { left: -60%; }
+  55%  { left: 130%; }
+  100% { left: 130%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-btn[data-view="mock"] { animation: none; }
+  .nav-btn[data-view="mock"]::after { display: none; }
+}
 .badge {
   background: var(--bg-3); border-radius: 10px;
   padding: 1px 8px; font-size: .75rem; color: var(--text);
