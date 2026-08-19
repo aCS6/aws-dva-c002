@@ -350,6 +350,129 @@ window.DVA_PLAN = [
    "IAM Identity Center (SSO): `aws configure sso` sets up a profile; `aws sso login` refreshes the short-lived session creds.",
    "CLI exit codes: 0 = success, 255 = error. In scripts use `set -euo pipefail` and check `$?` so a silent failure doesn't cascade."
   ],
+  "cheatSheetV2": {
+   "heading": "🚀 AWS Developer Tooling & Access",
+   "subtitle": "Exam Edition",
+   "sections": [
+    {
+     "type": "table",
+     "icon": "🧰",
+     "title": "The Core Tool Stack",
+     "cols": ["Tool", "What it is", "Key Exam Details"],
+     "rows": [
+      ["**AWS CLI**", "Command-line interface", "Config via `aws configure`. Keys in `~/.aws/credentials`, region in `~/.aws/config`. Switch profiles with `--profile` or `AWS_PROFILE`."],
+      ["**CloudShell**", "Browser-based terminal", "🌐 Uses console identity. CLI pre-installed. **1 GB persistent** `/home`. 100% free."],
+      ["**AWS SDK**", "Language libraries", "🧩 JS v3 (modular), Python (`boto3`). **Auto-retries** with exponential backoff. Region *must* be set."],
+      ["**AWS CDK**", "Infra as Code (real code)", "🏗️ Write TS/Python → synthesizes to CloudFormation. `cdk synth` → `cdk deploy`."]
+     ]
+    },
+    {
+     "type": "chain",
+     "icon": "🔐",
+     "title": "Credential Provider Chain",
+     "flag": "High Yield",
+     "subtitle": "How the SDK/CLI finds credentials. **First match wins!**",
+     "mnemonic": {
+      "phrase": "Exam Students Should Check Everything",
+      "hint": "E · S · S · C · E"
+     },
+     "steps": [
+      {
+       "k": "E",
+       "label": "Env Vars",
+       "note": "`AWS_ACCESS_KEY_ID` …"
+      },
+      {
+       "k": "S",
+       "label": "SSO",
+       "note": "IAM Identity Center"
+      },
+      {
+       "k": "S",
+       "label": "Shared Files",
+       "note": "`~/.aws/credentials`"
+      },
+      {
+       "k": "C",
+       "label": "Container Creds",
+       "note": "ECS Task Role"
+      },
+      {
+       "k": "E",
+       "label": "EC2 Instance Profile",
+       "note": "IMDS"
+      }
+     ]
+    },
+    {
+     "type": "traps",
+     "icon": "🚨",
+     "title": "Golden Rules & Exam Traps",
+     "subtitle": "The exact scenarios AWS uses to trick you.",
+     "items": [
+      {
+       "icon": "🚫",
+       "label": "Never hardcode keys",
+       "text": "On EC2/Lambda/ECS **always use IAM Roles** — the SDK auto-fetches temporary credentials."
+      },
+      {
+       "icon": "🌍",
+       "label": "Region resolution order",
+       "text": "`Explicit param` → `AWS_REGION` env → `~/.aws/config` profile. *No region = error.*"
+      },
+      {
+       "icon": "📦",
+       "label": "The pagination trap",
+       "text": "List APIs (S3 `ListObjects`) **cap at 1,000 items**. Use **Paginators** or loop on `NextToken` / `ContinuationToken`."
+      },
+      {
+       "icon": "💥",
+       "label": "CLI exit codes",
+       "text": "`0` = success, `255` = error. In bash use `set -euo pipefail` so silent failures don't cascade."
+      },
+      {
+       "icon": "🎟️",
+       "label": "SSO commands",
+       "text": "`aws configure sso` (set up profile) → `aws sso login` (refresh short-lived session)."
+      }
+     ]
+    },
+    {
+     "type": "recall",
+     "icon": "🧠",
+     "title": "Brain-Cache Active Recall",
+     "subtitle": "Test yourself first — tap a card to reveal the answer.",
+     "cards": [
+      {
+       "q": "Exact order of the Credential Provider Chain?",
+       "a": "Env → SSO → Shared → Container → EC2 *(first match wins)*"
+      },
+      {
+       "q": "Where does the CLI store keys vs. region?",
+       "a": "Keys → `~/.aws/credentials`; region → `~/.aws/config`"
+      },
+      {
+       "q": "You list 5,000 S3 objects via CLI — what happens?",
+       "a": "It caps at 1,000. Use a Paginator or `NextToken`."
+      },
+      {
+       "q": "Securely give a Lambda access to DynamoDB?",
+       "a": "Attach an **IAM Role** to the Lambda. Never hardcode keys!"
+      },
+      {
+       "q": "Which CDK command generates the CloudFormation template?",
+       "a": "`cdk synth`"
+      }
+     ]
+    },
+    {
+     "type": "tips",
+     "icon": "💡",
+     "title": "Cache It In Your Brain",
+     "items": ["**Read it aloud** — especially the mnemonic *Exam Students Should Check Everything*.", "**Visualize the staircase** — 5 credential steps; miss step 1, you fall to step 2, and so on.", "**Hunt the traps** — AWS tests what you *shouldn't* do (hardcoding keys) and edge cases (the 1,000-item cap)."]
+    }
+   ]
+  },
   "handsOn": [
    "Run `aws configure --profile dev` and set a region; then `aws sts get-caller-identity --profile dev`.",
    "List S3 buckets via CLI: `aws s3 ls`. Then the same call from an SDK snippet in CloudShell.",

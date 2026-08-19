@@ -396,11 +396,102 @@
     return html;
   }
 
+  // Inline light-markdown for cheat text: `code`, **bold**, *italic*. esc() first, so HTML is safe.
+  function csFmt(s) {
+    s = esc(s == null ? "" : String(s));
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    s = s.replace(/\*([^*]+)\*/g, '<i>$1</i>');
+    return s;
+  }
+
+  function csTable(sec) {
+    var h = '<div class="cs-tablewrap"><table class="cs-table"><thead><tr>';
+    (sec.cols || []).forEach(function (c) { h += '<th>' + csFmt(c) + '</th>'; });
+    h += '</tr></thead><tbody>';
+    (sec.rows || []).forEach(function (r) {
+      h += '<tr>';
+      r.forEach(function (cell, ci) { h += '<td' + (ci === 0 ? ' class="cs-tool"' : '') + '>' + csFmt(cell) + '</td>'; });
+      h += '</tr>';
+    });
+    return h + '</tbody></table></div>';
+  }
+
+  function csChain(sec) {
+    var h = '';
+    if (sec.mnemonic) {
+      h += '<div class="cs-mnem"><span class="cs-mnem-tag">🧠 Mnemonic</span><b class="cs-mnem-phrase">' + csFmt(sec.mnemonic.phrase) + '</b>';
+      if (sec.mnemonic.hint) h += '<span class="cs-mnem-hint">' + esc(sec.mnemonic.hint) + '</span>';
+      h += '</div>';
+    }
+    h += '<ol class="cs-stair">';
+    (sec.steps || []).forEach(function (st, i) {
+      h += '<li class="cs-step" style="margin-left:' + (i * 18) + 'px">'
+        + '<span class="cs-step-n">' + (i + 1) + '</span>'
+        + (st.k ? '<span class="cs-key">' + esc(st.k) + '</span>' : '')
+        + '<span class="cs-step-body"><b>' + csFmt(st.label) + '</b>'
+        + (st.note ? '<span class="cs-step-note">' + csFmt(st.note) + '</span>' : '')
+        + '</span></li>';
+    });
+    h += '</ol><div class="cs-stair-foot">⬇ First match wins — miss a step, fall to the next</div>';
+    return h;
+  }
+
+  function csTraps(sec) {
+    var h = '<ul class="cs-traps">';
+    (sec.items || []).forEach(function (it) {
+      h += '<li class="cs-trap"><span class="cs-trap-ic">' + esc(it.icon || "⚠️") + '</span>'
+        + '<div class="cs-trap-body"><b class="cs-trap-label">' + csFmt(it.label) + '</b>'
+        + '<span class="cs-trap-text">' + csFmt(it.text) + '</span></div></li>';
+    });
+    return h + '</ul>';
+  }
+
+  function csRecall(sec) {
+    var h = '<div class="cs-recall">';
+    (sec.cards || []).forEach(function (c, i) {
+      h += '<details class="cs-rcard"><summary class="cs-rq"><span class="cs-rq-n">' + (i + 1) + '</span>'
+        + '<span class="cs-rq-text">' + csFmt(c.q) + '</span><span class="cs-rq-cue">Reveal</span></summary>'
+        + '<div class="cs-ra">' + csFmt(c.a) + '</div></details>';
+    });
+    return h + '</div>';
+  }
+
+  function csTips(sec) {
+    var h = '<ol class="cs-tips">';
+    (sec.items || []).forEach(function (t) { h += '<li>' + csFmt(t) + '</li>'; });
+    return h + '</ol>';
+  }
+
+  function cheatSectionHTML(sec) {
+    var head = '<div class="cs-sec-head"><span class="cs-ic">' + esc(sec.icon || "") + '</span><h4>' + csFmt(sec.title) + '</h4>';
+    if (sec.flag) head += '<span class="cs-flag">' + esc(sec.flag) + '</span>';
+    head += '</div>';
+    if (sec.subtitle) head += '<p class="cs-desc">' + csFmt(sec.subtitle) + '</p>';
+    var body = "";
+    if (sec.type === "table") body = csTable(sec);
+    else if (sec.type === "chain") body = csChain(sec);
+    else if (sec.type === "traps") body = csTraps(sec);
+    else if (sec.type === "recall") body = csRecall(sec);
+    else if (sec.type === "tips") body = csTips(sec);
+    return '<section class="cs-sec cs-' + esc(sec.type) + '">' + head + body + '</section>';
+  }
+
+  function cheatSheetV2HTML(cs) {
+    var h = '<div class="panel-card cs-sheet"><div class="cs-hero"><h3>' + csFmt(cs.heading || "Cheat sheet") + '</h3>';
+    if (cs.subtitle) h += '<span class="cs-hero-tag">' + esc(cs.subtitle) + '</span>';
+    h += '</div>';
+    (cs.sections || []).forEach(function (sec) { h += cheatSectionHTML(sec); });
+    return h + '</div>';
+  }
+
   function cheatPanel(day) {
     var enrich = ENRICH[day.day] || {};
-    var html = '<div class="panel-card"><h3>Exam-day cheat sheet — ' + esc(day.title) + '</h3><ul class="cheat-list">';
-    (day.cheatSheet || []).forEach(function (line) { html += '<li>' + esc(line) + '</li>'; });
-    html += '</ul></div>';
+    var html = day.cheatSheetV2
+      ? cheatSheetV2HTML(day.cheatSheetV2)
+      : '<div class="panel-card"><h3>Exam-day cheat sheet — ' + esc(day.title) + '</h3><ul class="cheat-list">'
+          + (day.cheatSheet || []).map(function (line) { return '<li>' + esc(line) + '</li>'; }).join("")
+          + '</ul></div>';
     if (enrich.hooks && enrich.hooks.length) {
       html += '<div class="panel-card memory-hooks"><h3>🎯 Exam memory hooks</h3><ul class="cheat-list hooks">';
       enrich.hooks.forEach(function (h) { html += '<li>' + esc(h) + '</li>'; });
