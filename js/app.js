@@ -1182,3 +1182,40 @@
 
   document.addEventListener("DOMContentLoaded", init);
 })();
+
+// ---- Handbooks dropdown toggle ----
+(function () {
+  document.addEventListener('DOMContentLoaded', function () {
+    var toggle = document.getElementById('handbookToggle');
+    var dropdown = document.getElementById('handbookDropdown');
+    if (!toggle || !dropdown) return;
+
+    toggle.addEventListener('click', function (e) {
+      e.stopPropagation();
+      dropdown.classList.toggle('open');
+    });
+
+    // Close when clicking anywhere else
+    document.addEventListener('click', function () {
+      dropdown.classList.remove('open');
+    });
+  });
+})();
+
+// ---- Handbooks dropdown toggle ----
+(function () {
+  document.addEventListener('DOMContentLoaded', function () {
+    var toggle   = document.getElementById('handbookToggle');
+    var dropdown = document.getElementById('handbookDropdown');
+    if (!toggle || !dropdown) return;
+
+    toggle.addEventListener('click', function (e) {
+      e.stopPropagation();
+      dropdown.classList.toggle('open');
+    });
+
+    document.addEventListener('click', function () {
+      dropdown.classList.remove('open');
+    });
+  });
+})();

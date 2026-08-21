@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chapter 3 — AWS CodeBuild | CodePipeline Handbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+
+<!-- Sidebar Nav -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="../../index.html" class="sidebar-logo" title="← Back to DVA App"><img src="../../media/code-pipeline.svg" alt="" style="width:26px;height:26px;vertical-align:middle;margin-right:8px;filter:brightness(0) invert(1);"><span>CodePipeline<br><small style="font-weight:400;font-size:0.75rem;opacity:0.7;">Handbook</small></span></a><a href="../../index.html" style="display:block;margin-top:8px;font-size:0.74rem;color:#8899aa;text-decoration:none;padding:3px 0;">← DVA-C02 App</a>
+  </div>
+  <ul class="sidebar-nav">
+    <li><a href="../index.html">🏠 হোম</a></li>
+    <li class="nav-section">চ্যাপ্টারসমূহ</li>
+    <li><a href="01-introduction-aws-codepipeline-basics.html">১. CodePipeline Basics</a></li>
+    <li><a href="02-using-git-repositories-as-source-locations.html">২. Git Repositories as Source</a></li>
+    <li><a href="03-building-your-code-with-aws-codebuild.html" class="active">৩. AWS CodeBuild</a></li>
+    <li><a href="04-deploying-to-ec2-instances-with-aws-codedeploy.html">৪. AWS CodeDeploy (EC2)</a></li>
+    <li><a href="05-cloudformation-deploy-actions-manual-approvals-and-notifications.html">৫. CloudFormation, Approvals &amp; Notifications</a></li>
+    <li><a href="06-building-docker-images-ecs-rolling-deployments.html">৬. Docker &amp; ECS Deployments</a></li>
+    <li class="nav-section">রেফারেন্স</li>
+    <li><a href="../appendix.html">📎 Appendix</a></li>
+  </ul>
+</nav>
+
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+
+<main class="main-content">
+  <header class="chapter-header">
+    <div class="chapter-number">Chapter 3</div>
+    <h1>AWS CodeBuild দিয়ে Code Build করা</h1>
+    <p class="chapter-subtitle">CodeBuild concepts, buildspec.yml তৈরি, build lifecycle, failure log debugging এবং pipeline-এ automated test action যোগ করার সম্পূর্ণ গাইড।</p>
+  </header>
+
+  <!-- In-page TOC -->
+  <nav class="toc-box" aria-label="এই পেজে যা আছে">
+    <h2 class="toc-title">এই পেজে যা আছে</h2>
+    <ol class="toc-list">
+      <li><a href="#what-you-will-learn">এই চ্যাপ্টারে যা শিখবেন</a></li>
+      <li><a href="#what-is-codebuild">AWS CodeBuild কী?</a></li>
+      <li><a href="#prepare-repo-bucket">Repository ও Deployment Bucket প্রস্তুত করা</a></li>
+      <li><a href="#pipeline-with-build-stage">Build Stage সহ Pipeline তৈরি করা</a></li>
+      <li><a href="#buildspec-file">buildspec.yml তৈরি করা</a></li>
+      <li><a href="#build-lifecycle">Build-এর Lifecycle</a></li>
+      <li><a href="#viewing-build-logs">Build Failure Logs দেখা</a></li>
+      <li><a href="#why-automated-tests">Automated Test কেন দরকার?</a></li>
+      <li><a href="#test-action-codebuild">CodeBuild দিয়ে Test Action যোগ করা</a></li>
+      <li><a href="#key-terms">গুরুত্বপূর্ণ শব্দ</a></li>
+      <li><a href="#summary">সারাংশ</a></li>
+      <li><a href="#self-check">নিজেকে যাচাই করুন</a></li>
+    </ol>
+  </nav>
+
+  <!-- What you'll learn -->
+  <section id="what-you-will-learn">
+    <h2>এই চ্যাপ্টারে যা শিখবেন</h2>
+    <ul>
+      <li>AWS CodeBuild কী — serverless, managed build service এবং এর মূল concepts।</li>
+      <li>CodeBuild project তৈরি করা: image selection, compute size, service role, buildspec configuration।</li>
+      <li><code>buildspec.yml</code> file তৈরি করা: version, phases (install, pre_build, build, post_build), artifacts।</li>
+      <li>Build execution lifecycle-এর সব phases: SUBMITTED → QUEUED → PROVISIONING → DOWNLOAD_SOURCE → INSTALL → PRE_BUILD → BUILD → POST_BUILD → UPLOAD_ARTIFACTS → FINALIZING → COMPLETED।</li>
+      <li>Build failure হলে CloudWatch Logs এবং CodeBuild Console-এ log দেখার পদ্ধতি।</li>
+      <li><code>finally</code> block-এর ব্যবহার।</li>
+      <li>Automated test না থাকলে broken code deploy হওয়ার risk।</li>
+      <li>Pipeline-এ separate test action যোগ করা — sequential action group ব্যবহার করে।</li>
+    </ul>
+  </section>
+
+  <!-- Section 1: What is CodeBuild -->
+  <section id="what-is-codebuild">
+    <h2>AWS CodeBuild কী?</h2>
+    <p>AWS CodeBuild হলো AWS Developer Tools family-র একটি <strong>fully managed, serverless build service</strong>। আপনি build server maintain করেন না — শুধু build specification দেন।</p>
+
+    <h3>মূল বৈশিষ্ট্য</h3>
+    <ul>
+      <li><strong>Serverless ও Managed:</strong> Build server প্রভিশন, patch বা scale করার দরকার নেই।</li>
+      <li><strong>Scalable:</strong> Build demand অনুযায়ী automatically scale করে।</li>
+      <li><strong>Cost-effective:</strong> শুধুমাত্র build container চলার সময় pay করতে হয়। Idle time-এ কোনো cost নেই।</li>
+      <li><strong>Docker-based:</strong> প্রতিটি build-এর জন্য একটি নতুন Docker container provision করা হয়।</li>
+    </ul>
+
+    <h3>CodeBuild কীভাবে কাজ করে</h3>
+    <p>CodeBuild-কে pipeline-এর মধ্যে একটি <strong>command-line tool</strong> হিসেবে ভাবুন — যেকোনো shell command execute করতে পারে। Build করা, test run করা, Docker image build করা — সব কিছু।</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    SOURCE["Source Artifact\n(from S3 artifact store)"] --> CB["AWS CodeBuild\nDocker Container"]
+    CB -->|reads| BS["buildspec.yml\n(in source code)"]
+    BS --> PHASES["Install → Pre_build\n→ Build → Post_build"]
+    PHASES --> ART["Build Artifact\n(to S3 artifact store)"]
+    ART --> DEPLOY["Deploy Stage"]
+    PHASES -.->|logs| CW["CloudWatch Logs"]
+      </div>
+      <p class="diagram-caption">CodeBuild-এর মূল flow: source artifact → Docker container → buildspec → build artifact।</p>
+    </div>
+
+    <h3>Build Image Options</h3>
+    <p>CodeBuild-এ দুই ধরনের image ব্যবহার করা যায়:</p>
+    <ul>
+      <li><strong>CodeBuild-managed images:</strong> AWS-এর তৈরি standard image — Ubuntu, Amazon Linux 2, Windows Server Core। এগুলো runtime (Node.js, Python, Java, .NET, Ruby, Go) সহ আসে।</li>
+      <li><strong>Custom Docker image:</strong> Docker Hub বা Amazon ECR-এর যেকোনো image।</li>
+    </ul>
+
+    <h3>Compute Options</h3>
+    <ul>
+      <li><strong>EC2 compute (standard):</strong> সব region-এ supported, সব standard image।</li>
+      <li><strong>AWS Lambda compute:</strong> শুধুমাত্র কিছু region-এ supported।</li>
+    </ul>
+
+    <h3>Security</h3>
+    <ul>
+      <li>Data in transit: SSL certificates + Signature Version 4 signing।</li>
+      <li>Data at rest: S3 artifacts, logs, cache — AWS KMS customer-managed key দিয়ে encrypted।</li>
+      <li>Access control: IAM service role দিয়ে CodeBuild project চালানোর permission নির্ধারণ।</li>
+    </ul>
+
+    <h3>Standalone vs Pipeline-integrated</h3>
+    <p>CodeBuild standalone-ও ব্যবহার করা যায়:</p>
+    <ul>
+      <li>Source: CodeCommit, S3, GitHub, Bitbucket থেকে directly pull করতে পারে।</li>
+      <li>Console, CLI বা SDK দিয়ে manually trigger করা যায়।</li>
+      <li>CloudWatch Events দিয়ে scheduled build (hourly, nightly) করা যায়।</li>
+    </ul>
+  </section>
+
+  <!-- Section 2: Prepare Repo & Bucket -->
+  <section id="prepare-repo-bucket">
+    <h2>Repository ও Deployment Bucket প্রস্তুত করা</h2>
+    <p>এই section-এ একটি Angular application ব্যবহার করা হয়েছে — Angular জানা দরকার নেই। এটি শুধু CodeBuild concept প্র্যাকটিস করার জন্য।</p>
+
+    <h3>GitHub Repository Setup</h3>
+    <ol>
+      <li>GitHub-এ নতুন private repository তৈরি করুন: <code>my-angular-repo</code></li>
+      <li>Course resource থেকে <code>my-angular-project.zip</code> download করে extract করুন।</li>
+      <li>Terminal-এ project folder-এ যান:</li>
+    </ol>
+    <pre><code># Remote repository যোগ করুন
+git remote add origin https://github.com/YOUR-USERNAME/my-angular-repo.git
+
+# Push করুন (initial commit ইতিমধ্যে তৈরি)
+git push origin master</code></pre>
+
+    <h3>S3 Deployment Bucket Setup</h3>
+    <ol>
+      <li>S3-তে নতুন bucket তৈরি করুন: <code>my-angular-website-&lt;suffix&gt;</code> (Europe Ireland region)।</li>
+      <li>Block all public access বন্ধ করুন।</li>
+      <li>Bucket policy যোগ করুন (সব object publicly readable)।</li>
+      <li>Static website hosting enable করুন।
+        <div class="callout callout-info">
+          <strong>Angular SPA-র জন্য বিশেষ config:</strong> Single-page application-এ index document <strong>এবং</strong> error document উভয়ই <code>index.html</code> হিসেবে set করতে হবে। তাহলে যেকোনো route redirect করলে Angular handle করতে পারবে।
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- Section 3: Pipeline with Build Stage -->
+  <section id="pipeline-with-build-stage">
+    <h2>Build Stage সহ Pipeline তৈরি করা</h2>
+
+    <h3>Architecture</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    GH["GitHub\nmy-angular-repo"] -->|push triggers| SRC["Source Stage\nSourceArtifact"]
+    SRC --> BUILD["Build Stage\nCodeBuild Action\nBuildArtifact"]
+    BUILD --> DEPLOY["Deploy Stage\nS3 Deploy\n(extract files)"]
+    DEPLOY --> PROD["S3 Bucket\n(Angular website)"]
+      </div>
+      <p class="diagram-caption">Build stage সহ pipeline: GitHub → CodeBuild → S3 deploy।</p>
+    </div>
+
+    <h3>Pipeline তৈরির ধাপ</h3>
+    <ol>
+      <li>CodePipeline Console → <strong>Create pipeline</strong>।</li>
+      <li>Name: <code>MyAngularPipeline</code>, V2, Queued mode।</li>
+      <li>Source: GitHub (Version 2), <code>my-angular-repo</code>, master branch, no filter।</li>
+      <li>Build stage:
+        <ul>
+          <li><strong>Build provider:</strong> AWS CodeBuild।</li>
+          <li><strong>Region:</strong> Europe (Ireland) — pipeline-এর মতো একই।</li>
+          <li><strong>Input artifact:</strong> SourceArtifact।</li>
+          <li><strong>Create project</strong> ক্লিক করুন।</li>
+        </ul>
+      </li>
+    </ol>
+
+    <h3>CodeBuild Project Configuration</h3>
+    <ol>
+      <li><strong>Project name:</strong> <code>MyAngularBuild</code></li>
+      <li><strong>Description:</strong> (optional) "The build project for my Angular pipeline"</li>
+      <li><strong>Provisioning model:</strong> On-demand (cost-efficient)।</li>
+      <li><strong>Image type:</strong> Managed image।</li>
+      <li><strong>Compute type:</strong> EC2।</li>
+      <li><strong>Operating System:</strong> Ubuntu।</li>
+      <li><strong>Runtime:</strong> Standard।</li>
+      <li><strong>Image:</strong> <code>aws/codebuild/standard:7.0</code>
+        <p class="note">⚠️ Node.js 20 support করে এমন Ubuntu standard image হলো version 7.0। নতুন version আসলে সেটি ব্যবহার করুন। Runtime version requirement সবসময় CodeBuild documentation-এ check করুন।</p>
+      </li>
+      <li><strong>Image version:</strong> Always use the latest — security patches ও performance benefits।</li>
+      <li><strong>Service role:</strong> New service role তৈরি করুন।</li>
+      <li><strong>Privileged:</strong> Docker image build করতে দরকার — এখানে disable রাখুন।</li>
+      <li><strong>Compute size:</strong> Smallest option (3 GB memory, 2 vCPU) — Angular-এর জন্য যথেষ্ট।</li>
+      <li><strong>Buildspec:</strong> <strong>Use a buildspec file</strong> — <code>buildspec.yml</code> (root-এ default।)</li>
+      <li><strong>Logs:</strong> CloudWatch Logs (default) — একটি log group তৈরি হবে।</li>
+      <li><strong>Continue to CodePipeline</strong> ক্লিক করুন।</li>
+    </ol>
+
+    <div class="callout callout-warning">
+      <strong>প্রথম execution failure স্বাভাবিক:</strong> Pipeline তৈরির পর প্রথম execution fail করবে কারণ source code-এ এখনো <code>buildspec.yml</code> নেই। এটি expected behavior।
+    </div>
+
+    <ol start="5">
+      <li>Deploy stage: Amazon S3, <code>my-angular-website</code> bucket, ✅ Extract file before deploy।</li>
+      <li><strong>Create pipeline</strong>।</li>
+    </ol>
+  </section>
+
+  <!-- Section 4: Buildspec -->
+  <section id="buildspec-file">
+    <h2>buildspec.yml তৈরি করা</h2>
+    <p><code>buildspec.yml</code> হলো YAML format-এর একটি specification file যা CodeBuild-কে বলে কীভাবে code build করতে হবে। এটি source code-এর root-এ রাখা হয়।</p>
+
+    <div class="callout callout-info">
+      <strong>Best Practice:</strong> Buildspec সবসময় source code-এর সাথে Git repository-তে রাখুন। এতে buildspec-এর পরিবর্তন Git-এ track করা যায়।
+    </div>
+
+    <h3>Buildspec Structure</h3>
+    <pre><code>version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - npm install -g @angular/cli@17
+
+  pre_build:
+    commands:
+      - npm install
+
+  build:
+    commands:
+      - ng build -c production
+    finally:
+      - echo "Build phase finished (success or failure)"
+
+artifacts:
+  base-directory: dist/my-angular-project
+  files:
+    - "**/*"</code></pre>
+
+    <h3>Phases-এর ব্যাখ্যা</h3>
+    <div class="comparison-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Phase</th>
+            <th>উদ্দেশ্য</th>
+            <th>Best Practice</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>install</code></td>
+            <td>Runtime version এবং build tools install</td>
+            <td>Runtime version ও framework install (Angular CLI, Maven, etc.)</td>
+          </tr>
+          <tr>
+            <td><code>pre_build</code></td>
+            <td>Build-এর আগের কাজ</td>
+            <td>Project dependencies install (<code>npm install</code>, <code>pip install</code>), ECR login</td>
+          </tr>
+          <tr>
+            <td><code>build</code></td>
+            <td>মূল build command</td>
+            <td>Main build command (<code>ng build</code>, <code>mvn package</code>, <code>docker build</code>), test command-ও এখানে রাখা যায়</td>
+          </tr>
+          <tr>
+            <td><code>post_build</code></td>
+            <td>Build-এর পরের কাজ</td>
+            <td>Docker image push to ECR, SNS notification, cleanup</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>সব phase optional, কিন্তু <strong>কমপক্ষে একটি phase অবশ্যই থাকতে হবে</strong>।</p>
+
+    <h3>runtime-versions Syntax</h3>
+    <p>Runtime version define করার syntax (Ubuntu standard ও Amazon Linux 2 standard image-এ supported):</p>
+    <pre><code>runtime-versions:
+  nodejs: 20      # নির্দিষ্ট major version
+  nodejs: 20.x    # major version-এর latest minor
+  nodejs: latest  # সর্বশেষ version (ভবিষ্যতে পরিবর্তন হতে পারে)</code></pre>
+
+    <p>Runtime key-গুলো lowercase: <code>nodejs</code>, <code>python</code>, <code>java</code>, <code>ruby</code>, <code>dotnet</code> ইত্যাদি।</p>
+
+    <div class="callout callout-warning">
+      Runtime version এবং CodeBuild image version-এর compatibility নিশ্চিত করুন। Node.js 20 শুধুমাত্র Ubuntu standard:7.0 বা তার পরের version-এ supported।
+    </div>
+
+    <h3>finally Block</h3>
+    <p><code>finally</code> key-এর অধীনে commands গুলো phase <strong>succeed বা fail</strong> যাই হোক না কেন execute হয়।</p>
+    <pre><code>build:
+  commands:
+    - ng build -c production
+  finally:
+    - echo "This always runs"
+    - aws sns publish --topic-arn $SNS_TOPIC --message "Build complete"</code></pre>
+    <div class="callout callout-warning">
+      <code>finally</code> block-এর কোনো command fail করলেও পুরো phase fail হিসেবে চিহ্নিত হবে — এমনকি main commands succeed করলেও।
+    </div>
+
+    <h3>artifacts Section</h3>
+    <pre><code>artifacts:
+  base-directory: dist/my-angular-project   # build output folder
+  files:
+    - "**/*"     # সব file ও subfolder recursively</code></pre>
+    <p>Artifacts না থাকলেও <code>upload_artifacts</code> phase চলে — কিন্তু কিছু upload হয় না।</p>
+
+    <h3>Buildspec commit ও pipeline trigger</h3>
+    <pre><code>git add .
+git commit -m "Add the buildspec file"
+git push origin master</code></pre>
+    <p>Push হলে pipeline trigger হবে এবং এবার build সফল হবে।</p>
+  </section>
+
+  <!-- Section 5: Build Lifecycle -->
+  <section id="build-lifecycle">
+    <h2>Build-এর Lifecycle</h2>
+    <p>প্রতিটি CodeBuild execution নিচের phases-এর মধ্য দিয়ে যায়:</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> SUBMITTED
+    SUBMITTED --> QUEUED
+    QUEUED --> PROVISIONING
+    PROVISIONING --> DOWNLOAD_SOURCE
+    DOWNLOAD_SOURCE --> INSTALL
+    INSTALL --> PRE_BUILD
+    PRE_BUILD --> BUILD
+    BUILD --> POST_BUILD
+    POST_BUILD --> UPLOAD_ARTIFACTS
+    UPLOAD_ARTIFACTS --> FINALIZING
+    FINALIZING --> COMPLETED
+
+    DOWNLOAD_SOURCE --> FINALIZING : Build fails before BUILD phase
+    BUILD --> POST_BUILD : Even on failure
+      </div>
+      <p class="diagram-caption">CodeBuild execution lifecycle: সফল build-এর সম্পূর্ণ phase flow এবং failure-এ shortcut path।</p>
+    </div>
+
+    <div class="comparison-table">
+      <table>
+        <thead>
+          <tr><th>Phase</th><th>কী হয়</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>SUBMITTED</td><td>CodePipeline CodeBuild-এ build request পাঠায়।</td></tr>
+          <tr><td>QUEUED</td><td>Concurrent build limit পূর্ণ থাকলে queue-এ অপেক্ষা। Queued timeout পার হলে fail।</td></tr>
+          <tr><td>PROVISIONING</td><td>Build image থেকে নতুন Docker container provision করা হয়।</td></tr>
+          <tr><td>DOWNLOAD_SOURCE</td><td>S3 artifact store থেকে source artifact download, buildspec parse, runtime version install।</td></tr>
+          <tr><td>INSTALL</td><td><code>install</code> phase-এর commands execute।</td></tr>
+          <tr><td>PRE_BUILD</td><td><code>pre_build</code> phase-এর commands execute।</td></tr>
+          <tr><td>BUILD</td><td><code>build</code> phase-এর commands execute।</td></tr>
+          <tr><td>POST_BUILD</td><td><code>post_build</code> phase-এর commands execute। BUILD fail করলেও চলে।</td></tr>
+          <tr><td>UPLOAD_ARTIFACTS</td><td>Build artifact S3 artifact store-এ upload। POST_BUILD fail করলেও চলে।</td></tr>
+          <tr><td>FINALIZING</td><td>Container teardown, internal cleanup।</td></tr>
+          <tr><td>COMPLETED</td><td>Execution শেষ — SUCCESS বা FAILED।</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Failure Behavior</h3>
+    <ul>
+      <li>BUILD phase-এর <strong>আগে</strong> fail করলে: সরাসরি FINALIZING-এ যায় (POST_BUILD, UPLOAD_ARTIFACTS skip)।</li>
+      <li>BUILD phase-এ fail করলে: POST_BUILD এবং UPLOAD_ARTIFACTS তবুও চলে।</li>
+      <li>POST_BUILD fail করলে: Build artifact upload হতে পারে কিন্তু pipeline-এর পরবর্তী action trigger হবে না।</li>
+    </ul>
+  </section>
+
+  <!-- Section 6: Viewing Logs -->
+  <section id="viewing-build-logs">
+    <h2>Build Failure Logs দেখা</h2>
+    <p>Build failure debug করতে তিনটি জায়গা থেকে log দেখা যায়:</p>
+
+    <h3>১. CodePipeline Action Details</h3>
+    <ol>
+      <li>Pipeline-এ failed build action-এর <strong>View details</strong> ক্লিক করুন।</li>
+      <li><strong>Logs</strong> tab-এ build log দেখুন।</li>
+      <li>এখানে real-time log streaming দেখা যায় — চলমান execution-এও।</li>
+    </ol>
+
+    <h3>২. AWS CodeBuild Console</h3>
+    <ol>
+      <li>Action details-এ <strong>View in CodeBuild</strong> link ক্লিক করুন।</li>
+      <li><strong>Build logs</strong> tab বা <strong>Tail logs</strong> button ব্যবহার করুন।</li>
+      <li><strong>Phase details</strong> tab-এ প্রতিটি phase-এর status ও duration দেখুন।</li>
+    </ol>
+
+    <h3>৩. Amazon CloudWatch Logs</h3>
+    <ol>
+      <li>CodeBuild Console-এ <strong>View entire log</strong> link ক্লিক করুন।</li>
+      <li>Log group: <code>/aws/codebuild/MyAngularBuild</code> (project name থেকে generated)।</li>
+      <li>Log stream ID = build execution ID।</li>
+    </ol>
+    <p>CloudWatch Logs-এ long-term log retention, filtering এবং alerts configure করা যায়।</p>
+
+    <h3>Build Failure সিমুলেট ও Log Analysis</h3>
+    <p>Build fail হলে log-এ নিচের বিষয়গুলো দেখুন:</p>
+    <ul>
+      <li>কোন phase-এ fail করেছে।</li>
+      <li>Error message এবং failed command।</li>
+      <li><code>finally</code> block-এর output।</li>
+      <li><code>upload_artifacts</code> phase-এ error থাকলে — আসল কারণ আগের phase-এ খুঁজুন।</li>
+    </ul>
+
+    <div class="callout callout-info">
+      <code>exit 1</code> command দিলে Bash-এ non-zero exit code হয়, যা build failure trigger করে। Test করতে buildspec-এ এই command যোগ করে দেখুন।
+    </div>
+  </section>
+
+  <!-- Section 7: Why Automated Tests -->
+  <section id="why-automated-tests">
+    <h2>Automated Test কেন দরকার?</h2>
+    <p>Build ও deploy stage সফল হলেও application-এর logic ভুল হতে পারে। একটি উদাহরণ: Calculator application-এ ভুলবশত <code>+</code> operator-এর calculation পরিবর্তন হয়ে <code>/</code> হয়ে গেলে — build succeed করে deploy হয়, কিন্তু application broken।</p>
+
+    <div class="callout callout-danger">
+      Build ও deploy সফল হওয়া মানে application সঠিকভাবে কাজ করছে তা নয়। Application logic verify করতে automated test দরকার।
+    </div>
+
+    <h3>Automated Test-এর উপকারিতা</h3>
+    <ul>
+      <li>Deployment-এর আগেই bug ধরা পড়ে।</li>
+      <li>Manual testing-এর উপর নির্ভরশীলতা কমে।</li>
+      <li>Broken version production-এ যায় না।</li>
+      <li>Developer-রা নিশ্চিন্তে refactor করতে পারে।</li>
+    </ul>
+
+    <h3>Test Integration করার দুটি পদ্ধতি</h3>
+    <ol>
+      <li><strong>Buildspec-এ test command:</strong> Build command-এর আগে test command রাখুন। সহজ কিন্তু test fail করলে build ও skip হয়।</li>
+      <li><strong>Separate test action:</strong> Build stage-এ আলাদা sequential action group-এ test action যোগ করুন। Test fail হলে unnecessary build execute হয় না।</li>
+    </ol>
+  </section>
+
+  <!-- Section 8: Test Action -->
+  <section id="test-action-codebuild">
+    <h2>CodeBuild দিয়ে Test Action যোগ করা</h2>
+
+    <h3>Unit Test Buildspec তৈরি করা</h3>
+    <p>Test-এর জন্য আলাদা buildspec file তৈরি করুন: <code>unit-test-buildspec.yml</code></p>
+    <pre><code>version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - npm install -g @angular/cli@17
+      # Install Headless Chrome for Angular tests
+      - wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
+      - echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list
+      - apt-get update
+      - apt-get install -y google-chrome-stable
+
+  pre_build:
+    commands:
+      - npm install
+
+  build:
+    commands:
+      - ng test --no-watch --no-progress --browsers ChromeHeadlessCI</code></pre>
+
+    <p>Test action-এ কোনো <code>artifacts</code> section দরকার নেই — শুধু test চালানো হয়।</p>
+
+    <div class="callout callout-info">
+      <strong>Chrome Headless-এর প্রয়োজনীয়তা:</strong> Angular CLI-এর <code>ng test</code> command Karma test runner ব্যবহার করে, যার browser দরকার। CodeBuild-এর standard Ubuntu image-এ Chrome নেই, তাই manually install করতে হয়। <code>ChromeHeadlessCI</code> browser configuration-টি Angular project-এ আগে থেকে configured থাকলে এই command কাজ করবে।
+    </div>
+
+    <h3>Pipeline-এ Test Action যোগ করা</h3>
+    <ol>
+      <li>Pipeline → <strong>Edit</strong> → Build stage-এর <strong>Edit stage</strong>।</li>
+      <li>বিদ্যমান Build action-এর <strong>আগে</strong> নতুন action group-এ action যোগ করতে <strong>Add action group</strong> ক্লিক করুন (sequential)।</li>
+      <li>Action name: <code>UnitTest</code></li>
+      <li>Action provider: <strong>Test → AWS CodeBuild</strong>
+        <p class="note">⚠️ Test action-এর provider বিভিন্ন — Build এর মতো "Build" group নয়, "Test" group থেকে CodeBuild নির্বাচন করুন।</p>
+      </li>
+      <li>Input artifact: <strong>SourceArtifact</strong> (unit tests source code-এ থাকে।)</li>
+      <li><strong>Create project</strong> → CodeBuild project:
+        <ul>
+          <li>Name: <code>AngularUnitTest</code></li>
+          <li>Environment: same as build project (Ubuntu, standard, 7.0)।</li>
+          <li>Service role: New role (আলাদা role — least privilege best practice)।</li>
+          <li><strong>Buildspec:</strong> Use a buildspec file → filename: <code>unit-test-buildspec.yml</code>
+            <div class="callout callout-warning">Custom buildspec filename অবশ্যই দিতে হবে। না দিলে default <code>buildspec.yml</code> (build action-এর buildspec) খুঁজবে।</div>
+          </li>
+        </ul>
+      </li>
+      <li>Output artifact: <strong>কোনো output দেবেন না</strong> — test action artifact produce করে না।</li>
+      <li><strong>Done → Done → Save</strong>।</li>
+    </ol>
+
+    <h3>Test Action Behavior</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    SRC["Source Stage"] --> UT["UnitTest Action\n(sequential, first)"]
+    UT -->|Tests Pass| BUILD["Build Action\n(sequential, second)"]
+    UT -->|Tests Fail| FAIL["Pipeline FAILED\nBuild NOT executed"]
+    BUILD --> DEPLOY["Deploy Stage"]
+      </div>
+      <p class="diagram-caption">Sequential test action: test fail করলে build ও deploy execute হয় না।</p>
+    </div>
+
+    <ul>
+      <li>UnitTest action fail করলে Build action trigger হবে না — unnecessary cost বাঁচে।</li>
+      <li>Test fail হলে log-এ কোন test failed এবং expected vs actual value দেখা যায়।</li>
+      <li>Test action commit করতে হবে: <code>git add .</code> (নতুন buildspec file যোগ হয়েছে)।</li>
+    </ul>
+
+    <pre><code># নতুন buildspec file add করুন
+git add .
+git commit -m "Version 4.0"
+git push origin master</code></pre>
+  </section>
+
+  <!-- Key Terms -->
+  <section id="key-terms">
+    <h2>গুরুত্বপূর্ণ শব্দ</h2>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <dt>buildspec.yml</dt>
+        <dd>CodeBuild-কে build instruction দেওয়ার YAML file।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Build Phase</dt>
+        <dd>Buildspec-এ defined execution phase: install, pre_build, build, post_build।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>finally block</dt>
+        <dd>Phase succeed বা fail নির্বিশেষে execute হওয়া commands।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Build Artifact</dt>
+        <dd>Build-এর output files — deploy action-এর input হয়।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>runtime-versions</dt>
+        <dd>Buildspec-এর install phase-এ required runtime (Node.js, Python, Java, etc.) specify করা।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>base-directory</dt>
+        <dd>Artifacts section-এ build output-এর local folder path।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>DOWNLOAD_SOURCE phase</dt>
+        <dd>S3 artifact store থেকে source artifact download, buildspec parse।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>PROVISIONING phase</dt>
+        <dd>Build image থেকে Docker container তৈরি।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>UPLOAD_ARTIFACTS phase</dt>
+        <dd>Build output artifact S3-তে upload।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>FINALIZING phase</dt>
+        <dd>Container teardown — build সবসময় এখানে আসে।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Privileged mode</dt>
+        <dd>Docker daemon access-এর জন্য — Docker image build করতে প্রয়োজন।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Queued timeout</dt>
+        <dd>Build queue-এ অপেক্ষার সর্বোচ্চ সময় (default 8 hours)।</dd>
+      </div>
+    </div>
+  </section>
+
+  <!-- Summary -->
+  <section id="summary">
+    <h2>সারাংশ</h2>
+    <ul>
+      <li>AWS CodeBuild serverless, managed — Docker container-এ build commands execute করে।</li>
+      <li><code>buildspec.yml</code> source code-এর root-এ রাখুন — phases (install, pre_build, build, post_build) ও artifacts define করুন।</li>
+      <li>Build lifecycle: SUBMITTED → QUEUED → PROVISIONING → DOWNLOAD_SOURCE → INSTALL → PRE_BUILD → BUILD → POST_BUILD → UPLOAD_ARTIFACTS → FINALIZING → COMPLETED।</li>
+      <li>BUILD phase-এর আগে fail করলে POST_BUILD ও UPLOAD_ARTIFACTS skip হয়। BUILD phase-এ fail হলে POST_BUILD তবুও চলে।</li>
+      <li>Build log দেখুন: CodePipeline action details, CodeBuild Console (Phase details, Build logs, Tail logs), বা CloudWatch Logs।</li>
+      <li>Automated test pipeline-এ <strong>জরুরি</strong> — build succeed করলেও application broken হতে পারে।</li>
+      <li>Test action-এ: আলাদা buildspec file দিন, output artifact দেবেন না, sequential action group ব্যবহার করুন।</li>
+    </ul>
+  </section>
+
+  <!-- Self Check -->
+  <section id="self-check">
+    <h2>নিজেকে যাচাই করুন</h2>
+
+    <details>
+      <summary>১. buildspec.yml-এ <code>install</code> এবং <code>pre_build</code> phase-এর পার্থক্য কী?</summary>
+      <div class="answer">
+        <p><strong>install:</strong> Runtime version specify করা এবং build tool install (যেমন Angular CLI, Maven)। Runtime version এই phase-এই process হয়।</p>
+        <p><strong>pre_build:</strong> Project-এর dependencies install করা (যেমন <code>npm install</code>)। Docker-এ ECR login-ও এখানে।</p>
+        <p>Technically সব command যেকোনো phase-এ রাখা যায়, কিন্তু এই convention follow করলে buildspec readable হয়।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>২. Build lifecycle-এ BUILD phase fail করলে কোন phases skip হয় এবং কোনগুলো তবুও চলে?</summary>
+      <div class="answer">
+        <p><strong>Skip হয় না, তবুও চলে:</strong> POST_BUILD, UPLOAD_ARTIFACTS, FINALIZING।</p>
+        <p><strong>কিন্তু:</strong> DOWNLOAD_SOURCE বা INSTALL/PRE_BUILD phase-এ fail করলে → POST_BUILD এবং UPLOAD_ARTIFACTS skip হয়, সরাসরি FINALIZING-এ যায়।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৩. Test action-এ output artifact কেন define করা হয় না?</summary>
+      <div class="answer">
+        <p>Test action শুধু unit test run করে — কোনো deployable artifact তৈরি করে না। Artifact define করলে CodeBuild নির্দিষ্ট folder খুঁজবে এবং না পেলে UPLOAD_ARTIFACTS phase-এ fail করবে। তাই test buildspec-এ <code>artifacts</code> section রাখা উচিত নয়।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৪. Test action-কে build action-এর আগে sequential-এ রাখার সুবিধা কী?</summary>
+      <div class="answer">
+        <p>Test fail করলে build action execute হবে না। ফলে:</p>
+        <ul>
+          <li>Unnecessary build cost বাঁচে।</li>
+          <li>Broken code deploy হওয়ার chance নেই।</li>
+          <li>Pipeline execution দ্রুত fail করে feedback দেয়।</li>
+        </ul>
+        <p>Parallel-এ রাখলে test fail হলেও build চলবে — cost বাড়বে।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৫. CodeBuild-এ <code>finally</code> block-এর একটি practical use case কী?</summary>
+      <div class="answer">
+        <p>Build success বা failure নির্বিশেষে notification পাঠানো:</p>
+        <pre><code>build:
+  commands:
+    - ng build -c production
+  finally:
+    - aws sns publish --topic-arn $BUILD_NOTIFY_TOPIC \
+        --message "Build status: $CODEBUILD_BUILD_SUCCEEDING"</code></pre>
+        <p>অথবা temporary file cleanup, test report upload ইত্যাদি।</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- Chapter Navigation -->
+  <nav class="chapter-nav">
+    <a href="02-using-git-repositories-as-source-locations.html" class="chapter-nav-prev">← পূর্ববর্তী: Git Repositories</a>
+    <a href="04-deploying-to-ec2-instances-with-aws-codedeploy.html" class="chapter-nav-next">পরবর্তী: AWS CodeDeploy →</a>
+  </nav>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chapter 1 — AWS CodePipeline Basics | CodePipeline Handbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="../../index.html" class="sidebar-logo" title="← Back to DVA App"><img src="../../media/code-pipeline.svg" alt="" style="width:26px;height:26px;vertical-align:middle;margin-right:8px;filter:brightness(0) invert(1);"><span>CodePipeline<br><small style="font-weight:400;font-size:0.75rem;opacity:0.7;">Handbook</small></span></a><a href="../../index.html" style="display:block;margin-top:8px;font-size:0.74rem;color:#8899aa;text-decoration:none;padding:3px 0;">← DVA-C02 App</a>
+  </div>
+  <ul class="sidebar-nav">
+    <li><a href="../index.html">🏠 হোম</a></li>
+    <li class="nav-section">চ্যাপ্টারসমূহ</li>
+    <li><a href="01-introduction-aws-codepipeline-basics.html" class="active">১. CodePipeline Basics</a></li>
+    <li><a href="02-using-git-repositories-as-source-locations.html">২. Git Repositories as Source</a></li>
+    <li><a href="03-building-your-code-with-aws-codebuild.html">৩. AWS CodeBuild</a></li>
+    <li><a href="04-deploying-to-ec2-instances-with-aws-codedeploy.html">৪. AWS CodeDeploy (EC2)</a></li>
+    <li><a href="05-cloudformation-deploy-actions-manual-approvals-and-notifications.html">৫. CloudFormation, Approvals &amp; Notifications</a></li>
+    <li><a href="06-building-docker-images-ecs-rolling-deployments.html">৬. Docker &amp; ECS Deployments</a></li>
+    <li class="nav-section">রেফারেন্স</li>
+    <li><a href="../appendix.html">📎 Appendix</a></li>
+  </ul>
+</nav>
+
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+
+<main class="main-content">
+  <header class="chapter-header">
+    <div class="chapter-number">Chapter 1</div>
+    <h1>AWS CodePipeline — মূল ধারণা ও হাতে-কলমে শুরু</h1>
+    <p class="chapter-subtitle">Pipeline কী, কীভাবে কাজ করে, এবং S3 থেকে S3 deploy পর্যন্ত পুরোটা নিজে করার গাইড।</p>
+  </header>
+
+  <nav class="toc-box" aria-label="এই পেজে যা আছে">
+    <h2 class="toc-title">এই পেজে যা আছে</h2>
+    <ol class="toc-list">
+      <li><a href="#why-cicd">কেন CI/CD দরকার — আসল কারণ</a></li>
+      <li><a href="#core-concepts">Pipeline-এর মূল building blocks</a></li>
+      <li><a href="#execution-modes">Execution Modes — Queued, Superseded, Parallel</a></li>
+      <li><a href="#first-pipeline">প্রথম Pipeline: S3 → S3 deploy</a></li>
+      <li><a href="#change-detection">Source change detection কীভাবে কাজ করে</a></li>
+      <li><a href="#triggering">Pipeline trigger করার পদ্ধতি</a></li>
+      <li><a href="#viewing-history">Execution history ও details দেখা</a></li>
+      <li><a href="#editing">Pipeline edit ও parallel action যোগ করা</a></li>
+      <li><a href="#iam-permissions">Cross-region deploy-এ IAM permission</a></li>
+      <li><a href="#deleting">Pipeline ও সম্পর্কিত resources মুছে ফেলা</a></li>
+      <li><a href="#debug-tips">Debug tips</a></li>
+      <li><a href="#self-check">নিজেকে যাচাই করো</a></li>
+    </ol>
+  </nav>
+
+  <!-- ======================== WHY CI/CD ======================== -->
+  <section id="why-cicd">
+    <h2>কেন CI/CD দরকার — আসল কারণ</h2>
+
+    <p>সহজ কথায়: তুমি code লিখলে, সেটা production-এ যেতে হলে কতগুলো ম্যানুয়াল কাজ করতে হয় — build করো, test করো, zip বানাও, server-এ copy করো, restart করো। এই একই কাজ বারবার মানুষ করলে ভুল হবে, দেরি হবে।</p>
+
+    <p><strong>CI/CD এই পুরো process-টাকে code push করলেই automatically চালায়।</strong></p>
+
+    <div class="comparison-table">
+      <table>
+        <thead><tr><th></th><th>Continuous Integration (CI)</th><th>Continuous Delivery</th><th>Continuous Deployment</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>কী করে</td>
+            <td>Code push → build + unit test</td>
+            <td>CI + staging deploy + <strong>manual approval</strong> → production</td>
+            <td>CI + staging deploy + <strong>automatic</strong> production deploy</td>
+          </tr>
+          <tr>
+            <td>Human needed?</td>
+            <td>না</td>
+            <td>হ্যাঁ (approve করতে)</td>
+            <td>না</td>
+          </tr>
+          <tr>
+            <td>AWS CodePipeline-এ?</td>
+            <td>✅</td>
+            <td>✅ (Manual approval action)</td>
+            <td>✅</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>AWS CodePipeline হলো এই পুরো workflow-এর <strong>orchestrator</strong> — সে বলে কখন কী চলবে। নিজে build বা deploy করে না; সেটা CodeBuild বা CodeDeploy করে।</p>
+  </section>
+
+  <!-- ======================== CORE CONCEPTS ======================== -->
+  <section id="core-concepts">
+    <h2>Pipeline-এর মূল Building Blocks</h2>
+
+    <p>একবার মাথায় ঢুকলে বাকি সব সহজ হয়ে যাবে:</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    P["🗂️ Pipeline\n(workflow)"]
+    S1["📦 Stage\n(Source)"]
+    S2["🔨 Stage\n(Build)"]
+    S3["🚀 Stage\n(Deploy)"]
+    A1["Action\nS3 Source"]
+    A2["Action\nCodeBuild"]
+    A3a["Action\nDeploy EU"]
+    A3b["Action\nDeploy US\n(parallel)"]
+    ART["S3 Artifact\nStore"]
+
+    P --> S1 --> S2 --> S3
+    S1 --- A1
+    S2 --- A2
+    S3 --- A3a
+    S3 --- A3b
+    A1 -->|SourceArtifact| ART
+    ART -->|BuildArtifact| A3a
+    ART -->|BuildArtifact| A3b
+      </div>
+      <p class="diagram-caption">Pipeline-এর hierarchy: Pipeline → Stage → Action Group → Action। Artifact store দিয়ে data pass হয়।</p>
+    </div>
+
+    <dl>
+      <dt><strong>Pipeline</strong></dt>
+      <dd>পুরো workflow-এর নাম। একটি pipeline-এর নাম পরে পরিবর্তন করা যায় না।</dd>
+
+      <dt><strong>Stage</strong></dt>
+      <dd>Logical grouping। যেমন: Source, Build, Staging, Deploy। একটি stage একসাথে একটিমাত্র execution process করতে পারে — সে সময় stage "locked" থাকে।</dd>
+
+      <dt><strong>Action</strong></dt>
+      <dd>একটি stage-এর ভেতরে real কাজ। যেমন: "S3 থেকে source নামিয়ে আনো" বা "CodeBuild দিয়ে build করো"।</dd>
+
+      <dt><strong>Action Group</strong></dt>
+      <dd>একই stage-এর ভেতরে action-এর execution order নির্ধারণ করে। একই group-এ থাকা action-গুলো parallel-এ চলে।</dd>
+
+      <dt><strong>Transition</strong></dt>
+      <dd>দুই stage-এর মধ্যে "gate"। Enable বা disable করা যায়। Disable থাকলে execution সেখানে আটকে থাকে।</dd>
+
+      <dt><strong>Artifact</strong></dt>
+      <dd>একটি action-এর output file যা পরের action-এর input হয়। সব artifact S3 artifact store-এ জমা থাকে।</dd>
+
+      <dt><strong>Source Revision</strong></dt>
+      <dd>Source location-এ যে change pipeline trigger করে। প্রতিটি revision-এর unique ID থাকে (S3 version ID বা Git commit ID)।</dd>
+
+      <dt><strong>Pipeline Execution</strong></dt>
+      <dd>একটি specific source revision-কে pipeline-এর মধ্যে দিয়ে run করানো। প্রতিটি execution-এর unique execution ID থাকে।</dd>
+    </dl>
+
+    <div class="callout callout-info">
+      <strong>Artifact Store:</strong> CodePipeline নিজেই একটি S3 bucket তৈরি করে এবং সব artifact সেখানে রাখে। নাম হয় <code>codepipeline-REGION-ACCOUNT_ID</code>। একটি region-এ সব pipeline এটি share করে।
+    </div>
+  </section>
+
+  <!-- ======================== EXECUTION MODES ======================== -->
+  <section id="execution-modes">
+    <h2>Execution Modes — Queued, Superseded, Parallel</h2>
+
+    <p>একই সময়ে multiple commit push করলে pipeline কীভাবে behave করবে সেটা execution mode ঠিক করে:</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    Q["QUEUED (default)\nনতুন execution আগেরটি শেষ হওয়ার\nঅপেক্ষা করে (queue)"]
+    S["SUPERSEDED (পুরনো default)\nনতুন execution stage-এর মাঝে\nআটকে থাকা আগেরটিকে replace করে"]
+    PA["PARALLEL\nসব execution একসাথে চলে\nকোনো queue বা replacement নেই"]
+
+    Q -->|"Deploy দেরি করলে"| NOTE_Q["পুরনো আর নতুন দুটোই queue-তে থাকে"]
+    S -->|"পুরনো stage-এর বাইরে থাকলে"| NOTE_S["পুরনোটি SUPERSEDED হয়"]
+    PA -->|"সবসময়"| NOTE_PA["সব parallel, race condition সম্ভব"]
+      </div>
+      <p class="diagram-caption">V2 pipeline-এর তিনটি execution mode — behavior মাথায় রাখলে অনেক production bug এড়ানো যায়।</p>
+    </div>
+
+    <div class="callout callout-warning">
+      <strong>Superseded কখন হয়?</strong> শুধুমাত্র যখন পুরনো execution দুটো stage-এর <em>মাঝে</em> (transition-এ) আটকে থাকে। Stage-এর ভেতরে lock নিয়ে ফেললে সেটাকে supersede করা যায় না।
+    </div>
+  </section>
+
+  <!-- ======================== FIRST PIPELINE ======================== -->
+  <section id="first-pipeline">
+    <h2>প্রথম Pipeline: S3 → S3 Deploy</h2>
+
+    <p>লক্ষ্য: একটি zip package source S3 bucket-এ upload করলেই automatically production S3 bucket-এ deploy হবে।</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    DEV["তুমি\nmy-website.zip upload করো"]
+    SRC["Source S3 Bucket\nversioning: ON\nregion: eu-west-1"]
+    CW["CloudWatch Events\nPutObject detect করলে trigger"]
+    ART["S3 Artifact Store\ncodepipeline-eu-west-1-xxxx"]
+    PROD["Production S3 Bucket\nstatic website hosting: ON\nregion: যেকোনো"]
+
+    DEV -->|PutObject| SRC
+    SRC -->|event triggers pipeline| CW
+    CW -->|Source Stage runs| ART
+    ART -->|Deploy Stage extracts & copies| PROD
+      </div>
+      <p class="diagram-caption">S3 → S3 pipeline-এর end-to-end flow। Source bucket-এ zip upload হলে production bucket-এ সাইট deploy হয়।</p>
+    </div>
+
+    <h3>ধাপ ১ — Source S3 Bucket তৈরি করো</h3>
+    <ol>
+      <li>S3 Console → <strong>Create bucket</strong></li>
+      <li>Region: <strong>eu-west-1</strong> (pipeline-এর region-এর সাথে same রাখো)</li>
+      <li>Name: <code>my-website-source-&lt;unique-suffix&gt;</code></li>
+      <li>Scroll down → <strong>Bucket Versioning: Enable</strong> ✅
+        <div class="callout callout-danger">এটা না করলে CodePipeline source হিসেবে এই bucket accept করবে না। Versioning থেকে CodePipeline বোঝে কোন version deploy করতে হবে।</div>
+      </li>
+      <li>Create bucket</li>
+    </ol>
+
+    <h3>ধাপ ২ — Production S3 Bucket তৈরি ও Configure করো</h3>
+    <ol>
+      <li>আবার <strong>Create bucket</strong></li>
+      <li>Name: <code>my-website-prod-&lt;unique-suffix&gt;</code></li>
+      <li><strong>Block all public access: OFF</strong> করো → acknowledge করো (static website চালাতে হবে তাই)</li>
+      <li>Create bucket → bucket details খোলো</li>
+      <li><strong>Permissions</strong> tab → Bucket policy → Edit → নিচের JSON paste করো:</li>
+    </ol>
+    <pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": "*",
+    "Action": "s3:GetObject",
+    "Resource": "arn:aws:s3:::YOUR-BUCKET-NAME/*"
+  }]
+}</code></pre>
+    <ol start="6">
+      <li><strong>Properties</strong> tab → Static website hosting → Edit → Enable</li>
+      <li>Index document: <code>index.html</code> · Error document: <code>error.html</code> → Save</li>
+    </ol>
+
+    <h3>ধাপ ৩ — Source Package Upload করো</h3>
+    <p><code>index.html</code> আর <code>error.html</code> — দুটো file সরাসরি zip করো (folder zip করবা না!)। নাম দাও: <code>my-website.zip</code>। Source bucket-এ upload করো।</p>
+
+    <h3>ধাপ ৪ — Pipeline তৈরি করো</h3>
+    <ol>
+      <li>CodePipeline Console → <strong>Create pipeline</strong> → Build custom pipeline → Next</li>
+      <li>Pipeline name: <code>MyWebsitePipeline</code> (নাম পরে বদলাবে না)</li>
+      <li>Pipeline type: V2 (only option) · Execution mode: <strong>Queued</strong></li>
+      <li>Service role: <strong>New service role</strong> — CodePipeline নিজে তৈরি করুক</li>
+      <li>Artifact store: <strong>Default location</strong> → Next</li>
+      <li><strong>Source Stage:</strong>
+        <ul>
+          <li>Provider: <strong>Amazon S3</strong></li>
+          <li>Bucket: তোমার source bucket</li>
+          <li>S3 object key: <code>my-website.zip</code></li>
+          <li>Change detection: <strong>Amazon CloudWatch Events</strong> ✅ (polling করবা না)</li>
+        </ul>
+      </li>
+      <li>Next → <strong>Skip build stage</strong> → Skip</li>
+      <li><strong>Deploy Stage:</strong>
+        <ul>
+          <li>Provider: <strong>Amazon S3</strong></li>
+          <li>Region: eu-west-1</li>
+          <li>Bucket: production bucket</li>
+          <li>✅ <strong>Extract file before deploy</strong> — না করলে zip ফাইলটাই deploy হবে, HTML file না</li>
+        </ul>
+      </li>
+      <li>Next → Review → <strong>Create pipeline</strong></li>
+    </ol>
+
+    <div class="callout callout-success">
+      Pipeline তৈরির সাথে সাথে automatic একটি execution শুরু হবে। Source bucket-এ যে zip আছে সেটা deploy হবে।
+    </div>
+
+    <h3>তৈরি হওয়ার সাথে সাথে AWS কী কী বানায়</h3>
+    <ul>
+      <li><strong>S3 Artifact Store</strong>: <code>codepipeline-eu-west-1-ACCOUNT_ID</code> — এই region-এর সব pipeline এটা share করে</li>
+      <li><strong>CloudWatch Events rule</strong>: Source bucket-এর <code>PutObject</code> event catch করে pipeline trigger করে। CloudTrail-এর মাধ্যমে কাজ করে।</li>
+      <li><strong>IAM roles</strong>: Pipeline service role + EventBridge trigger role</li>
+    </ul>
+  </section>
+
+  <!-- ======================== CHANGE DETECTION ======================== -->
+  <section id="change-detection">
+    <h2>Source Change Detection কীভাবে কাজ করে</h2>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant DEV as তুমি
+    participant S3 as Source S3
+    participant CT as CloudTrail
+    participant CW as CloudWatch Events Rule
+    participant CP as CodePipeline
+
+    DEV->>S3: PUT my-website.zip (new version)
+    S3->>CT: PutObject API call logged
+    CT->>CW: Event emitted
+    CW->>CP: Trigger pipeline execution
+    Note over CP: Source Stage শুরু হয়
+    CP->>S3: zip download করে artifact store-এ রাখে
+      </div>
+      <p class="diagram-caption">S3 source-এর change detection chain: তুমি upload করলে → CloudTrail log → CloudWatch event → pipeline trigger।</p>
+    </div>
+
+    <p><strong>দুটো detection option:</strong></p>
+    <ul>
+      <li><strong>Amazon CloudWatch Events (recommended)</strong> — near real-time। Upload হওয়ার কয়েক সেকেন্ডের মধ্যে trigger হয়।</li>
+      <li><strong>AWS CodePipeline (polling)</strong> — CodePipeline নিজে check করে। দেরি হয়, অপ্রয়োজনীয় API call হয়। এটা ব্যবহার করবা না।</li>
+    </ul>
+  </section>
+
+  <!-- ======================== TRIGGERING ======================== -->
+  <section id="triggering">
+    <h2>Pipeline Trigger করার পদ্ধতি</h2>
+
+    <p>মোট ৩টা উপায়:</p>
+
+    <div class="comparison-table">
+      <table>
+        <thead><tr><th>পদ্ধতি</th><th>কীভাবে</th><th>History-তে trigger দেখাবে</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Automatic (source change)</td>
+            <td>Source-এ নতুন version upload/push হলে</td>
+            <td>CloudWatch event rule বা "Git push + commit ID"</td>
+          </tr>
+          <tr>
+            <td>Manual — Release change</td>
+            <td>Pipeline page → <strong>Release change</strong> button</td>
+            <td><code>StartPipelineExecution</code> — তোমার IAM user দেখাবে</td>
+          </tr>
+          <tr>
+            <td>Pipeline creation</td>
+            <td>Pipeline তৈরির সময় automatic</td>
+            <td><code>CreatePipeline</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Transitions disable/enable করা</h3>
+    <p>Transition disable করলে source stage শেষ হওয়ার পর execution সেখানে আটকে থাকে। Deploy stage-এ যাওয়ার আগে তুমি ম্যানুয়ালি "Enable" করতে পারো — মানে controlled deployment।</p>
+    <ul>
+      <li>Pipeline page-এ দুটো stage-এর মাঝে তীরচিহ্নে ক্লিক করো → Disable/Enable</li>
+      <li>Disable করার সময় reason লেখো (monitoring-এর জন্য কাজে লাগে)</li>
+      <li>Re-enable করলে শুধুমাত্র <strong>latest queued execution</strong> এগিয়ে যায়</li>
+    </ul>
+  </section>
+
+  <!-- ======================== VIEWING HISTORY ======================== -->
+  <section id="viewing-history">
+    <h2>Execution History ও Details দেখা</h2>
+
+    <h3>Pipeline list page</h3>
+    <ul>
+      <li>Latest execution status, source revision, কখন শুরু হয়েছে</li>
+      <li>Recent execution form (football team form-এর মতো — শেষ কয়েকটা success/fail)</li>
+    </ul>
+
+    <h3>Pipeline details page (pipeline name ক্লিক করো)</h3>
+    <ul>
+      <li>বড় box = Stage, ছোট box = Action</li>
+      <li>Blue = In Progress, Green = Succeeded, Red = Failed</li>
+      <li>প্রতিটি stage-এ execution ID দেখায় — source ও deploy-এর ID আলাদা হলে বুঝবে deployment হয়নি</li>
+    </ul>
+
+    <h3>Action details (View details ক্লিক করো)</h3>
+    <ul>
+      <li><strong>Summary tab:</strong> last execution details, unique action execution ID</li>
+      <li><strong>Input tab:</strong> Variable namespace, input artifacts, action-specific config। যেমন S3 source-এর জন্য <code>PollForSourceChanges: false</code> মানে CloudWatch Events ব্যবহার হচ্ছে।</li>
+      <li><strong>Output tab:</strong> Output artifact-এর bucket, key, ETag, version ID</li>
+    </ul>
+
+    <h3>Execution details (execution ID ক্লিক করো)</h3>
+    <ul>
+      <li><strong>Summary:</strong> trigger, start/end, duration</li>
+      <li><strong>Timeline:</strong> প্রতিটি action-এর start/end/duration — action duration-এর sum মিলবে না কারণ transition time আলাদা</li>
+      <li><strong>Variables:</strong> pipeline variables (যদি define করা থাকে)</li>
+      <li><strong>Revisions:</strong> S3 version ID বা commit ID</li>
+    </ul>
+
+    <h3>Settings page (বাম menu-তে Settings)</h3>
+    <ul>
+      <li>Pipeline ARN, service role, version number (update করলে বাড়ে)</li>
+      <li>Artifact store bucket</li>
+      <li>Tags যোগ করো — best practice</li>
+    </ul>
+
+    <div class="callout callout-info">
+      <strong>Rerun button:</strong> Same input দিয়ে নতুন execution trigger করে। Debug করার সময় কাজে লাগে।
+    </div>
+  </section>
+
+  <!-- ======================== EDITING ======================== -->
+  <section id="editing">
+    <h2>Pipeline Edit ও Parallel Action যোগ করা</h2>
+
+    <p>Scenario: production bucket-এর পাশাপাশি অন্য region-এর আরেকটি bucket-এও একই সময়ে deploy করতে চাই।</p>
+
+    <h3>Parallel action যোগ করার ধাপ</h3>
+    <ol>
+      <li>Pipeline page → <strong>Edit</strong></li>
+      <li>Deploy stage → <strong>Edit stage</strong></li>
+      <li>বিদ্যমান action-এর পাশের box-এ <strong>Add action</strong> ক্লিক করো (same action group = parallel)</li>
+      <li>Action name: <code>DeployToUS</code></li>
+      <li>Provider: Amazon S3 · Region: <strong>us-east-1</strong></li>
+      <li>Input artifact: SourceArtifact</li>
+      <li>Bucket: second bucket · ✅ Extract file before deploy</li>
+      <li>Done → Done → Save</li>
+    </ol>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    SRC["Source Stage"]
+    SRC -->|SourceArtifact| AG["Deploy Stage\n(Action Group)"]
+
+    subgraph AG["Deploy Stage — একই Action Group = Parallel"]
+      direction LR
+      D1["Deploy (eu-west-1)\nOriginal action"]
+      D2["DeployToUS (us-east-1)\nNew parallel action"]
+    end
+      </div>
+      <p class="diagram-caption">Deploy Stage-এ দুটো action একই action group-এ → parallel-এ চলে।</p>
+    </div>
+
+    <h3>Sequential vs Parallel</h3>
+    <ul>
+      <li><strong>Same action group</strong> → parallel</li>
+      <li><strong>Add action group</strong> (নতুন group) → sequential (আগেরটি শেষ হলে শুরু হবে)</li>
+      <li><strong>Add stage</strong> (নতুন stage) → sequential, আলাদা stage-এ</li>
+    </ul>
+
+    <div class="callout callout-warning">
+      Pipeline update করলে automatic trigger হয় না। নতুন action execute করতে manually <strong>Release change</strong> করো।
+    </div>
+  </section>
+
+  <!-- ======================== IAM PERMISSIONS ======================== -->
+  <section id="iam-permissions">
+    <h2>Cross-region Deploy-এ IAM Permission</h2>
+
+    <p>Second region-এ deploy action যোগ করলে pipeline-এর service role-এ নতুন permissions লাগবে। দুটো policy update করতে হয়:</p>
+
+    <h3>Policy 1: Artifact store access</h3>
+    <p>Default policy শুধু original region-এর artifact store allow করে। Second region-এর জন্য bucket ARN-এর region part wildcard করে দাও:</p>
+    <pre><code>/* আগে (specific region) */
+"Resource": "arn:aws:s3:::codepipeline-eu-west-1-ACCOUNT_ID"
+
+/* পরে (all regions) */
+"Resource": "arn:aws:s3:::codepipeline-*"</code></pre>
+
+    <h3>Policy 2: Deployment bucket access</h3>
+    <p>Second deployment bucket-এর ARN যোগ করো:</p>
+    <pre><code>"Resource": [
+  "arn:aws:s3:::my-website-prod/*",
+  "arn:aws:s3:::my-website-prod-us/*"   /* নতুন bucket */
+]</code></pre>
+
+    <div class="callout callout-info">
+      <strong>Cross-region artifact store issue:</strong> কোনো region-এ প্রথমবার pipeline চালালে CodePipeline সেই region-এ artifact store bucket তৈরি করে। যদি error পাও, ওই region-এ একটি test pipeline তৈরি করে run করো — artifact store auto-create হবে। তারপর original pipeline-এ try করো।
+    </div>
+  </section>
+
+  <!-- ======================== DELETING ======================== -->
+  <section id="deleting">
+    <h2>Pipeline ও সম্পর্কিত Resources মুছে ফেলা</h2>
+
+    <h3>Pipeline delete করার দুটো উপায়</h3>
+    <ul>
+      <li>Pipeline list → select → <strong>Delete pipeline</strong> button</li>
+      <li>Pipeline details → Edit → <strong>Delete</strong> button</li>
+    </ul>
+    <p>Confirmation dialog-এ text field-এ <code>delete</code> টাইপ করো।</p>
+
+    <h3>Change detection resources</h3>
+    <p>Default-এ <em>"Delete change detection resources"</em> চেক করা থাকে → CloudWatch Events rule-ও delete হয়। Uncheck করলে rule থেকে যাবে।</p>
+
+    <h3>⚠️ যা automatically delete হয় না</h3>
+    <div class="callout callout-danger">
+      Pipeline delete করলেও নিচেরগুলো থেকে যায় — manually সরাতে হবে:
+      <ul>
+        <li>Source S3 bucket</li>
+        <li>Deployment S3 bucket(s)</li>
+        <li>Artifact store S3 bucket (<code>codepipeline-REGION-ACCOUNT</code>) — অন্য pipeline ব্যবহার করে, রাখলেও চলে</li>
+        <li>IAM roles ও customer-managed policies</li>
+      </ul>
+    </div>
+
+    <h3>IAM cleanup</h3>
+    <p>Pipeline delete করলে দুটো role থেকে যায়:</p>
+    <ul>
+      <li><strong>CodePipeline service role</strong> — pipeline execution-এ assume করা হত। একাধিক pipeline-এ reuse করা যায়, তাই রাখতে পারো।</li>
+      <li><strong>CloudWatch Events trigger role</strong> — pipeline-specific। এটা delete করে ফেলো।</li>
+    </ul>
+    <p>IAM Console → Policies → Filter: <strong>Customer managed</strong> → pipeline-related policies delete করো।</p>
+
+    <h3>Artifact store cleanup (optional)</h3>
+    <p>Artifact store bucket-এ প্রতিটি pipeline-এর জন্য একটি folder তৈরি হয়। Lifecycle rule যোগ করে পুরনো artifacts expire করতে পারো। Delete করলে শুধু সেই pipeline-এর folder delete করো।</p>
+  </section>
+
+  <!-- ======================== DEBUG TIPS ======================== -->
+  <section id="debug-tips">
+    <h2>Debug Tips</h2>
+
+    <div class="comparison-table">
+      <table>
+        <thead><tr><th>সমস্যা</th><th>কোথায় চেক করবে</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Pipeline trigger হচ্ছে না</td>
+            <td>S3 bucket-এ versioning ON আছে? CloudWatch Events rule exist করে? Transition disabled?</td>
+          </tr>
+          <tr>
+            <td>Action "Access Denied" দিয়ে fail</td>
+            <td>Pipeline settings → service role → attached policies চেক করো। Missing permission-এ inline policy যোগ করো।</td>
+          </tr>
+          <tr>
+            <td>Source ও Deploy stage-এ আলাদা execution ID</td>
+            <td>Normal — যদি transition disabled ছিল। Re-enable করলে মিলে যাবে।</td>
+          </tr>
+          <tr>
+            <td>Cross-region deploy "networking error"</td>
+            <td>Second region-এ artifact store নেই। ওই region-এ একটি temp pipeline বানাও।</td>
+          </tr>
+          <tr>
+            <td>Pipeline execution "Superseded" হয়ে গেছে</td>
+            <td>Normal behavior। Staging-এ manual approval থাকলে বেশি দেখা যায়। Staging stage-এর lock আছে কিনা দেখো।</td>
+          </tr>
+          <tr>
+            <td>Deploy action "Didn't Run"</td>
+            <td>Pipeline update-এর পর automatic trigger হয় না। <strong>Release change</strong> করো।</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ======================== SELF CHECK ======================== -->
+  <section id="self-check">
+    <h2>নিজেকে যাচাই করো</h2>
+
+    <details>
+      <summary>S3 bucket source হিসেবে ব্যবহার করতে দুটো requirement কী?</summary>
+      <div class="answer">
+        <ol>
+          <li>Bucket অবশ্যই pipeline-এর <strong>same region</strong>-এ হতে হবে।</li>
+          <li>Bucket-এ <strong>versioning enable</strong> থাকতে হবে — CodePipeline version ID দিয়ে revision track করে।</li>
+        </ol>
+      </div>
+    </details>
+
+    <details>
+      <summary>Pipeline update করার পর নতুন action execute করতে কী করতে হয়?</summary>
+      <div class="answer">
+        <p>Pipeline update-এ automatic trigger হয় না। Pipeline page-এ <strong>Release change</strong> button ক্লিক করো → Confirm। এটা latest source version নিয়ে পুরো pipeline run করবে।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Superseded execution কখন ঘটে? Stage lock থাকলে কি ঘটতে পারে?</summary>
+      <div class="answer">
+        <p>দুটো stage-এর <strong>মাঝে (transition-এ)</strong> অপেক্ষা করার সময় নতুন execution এসে গেলে পুরনোটি superseded হয়।</p>
+        <p><strong>Stage lock থাকলে হয় না।</strong> Stage-এ enter করলে lock নেয় — নতুন execution ঢুকতে পারে না, তাই supersede-ও করতে পারে না।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Change detection-এ CloudWatch Events বনাম polling — কোনটি কেন ব্যবহার করবে?</summary>
+      <div class="answer">
+        <p><strong>CloudWatch Events</strong> ব্যবহার করো। কারণ:</p>
+        <ul>
+          <li>Near real-time — upload হওয়ার সেকেন্ডের মধ্যে trigger হয়</li>
+          <li>Polling-এ CodePipeline নিয়মিত S3 check করে — unnecessary API calls, দেরি হয়</li>
+        </ul>
+      </div>
+    </details>
+
+    <details>
+      <summary>Pipeline delete করলে কী automatically মুছে যায় আর কী থেকে যায়?</summary>
+      <div class="answer">
+        <p><strong>মুছে যায় (default):</strong> CloudWatch Events/EventBridge trigger rule।</p>
+        <p><strong>থেকে যায়:</strong> Source bucket, deployment bucket(s), artifact store bucket, IAM roles ও customer-managed policies। এগুলো manually delete করতে হবে।</p>
+      </div>
+    </details>
+  </section>
+
+  <nav class="chapter-nav">
+    <span class="chapter-nav-prev"></span>
+    <a href="02-using-git-repositories-as-source-locations.html" class="chapter-nav-next">পরবর্তী: Git Repositories as Source →</a>
+  </nav>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

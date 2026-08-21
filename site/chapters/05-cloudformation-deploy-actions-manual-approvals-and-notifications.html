@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chapter 5 — CloudFormation, Manual Approvals &amp; Notifications | CodePipeline Handbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+
+<!-- Sidebar Nav -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="../../index.html" class="sidebar-logo" title="← Back to DVA App"><img src="../../media/code-pipeline.svg" alt="" style="width:26px;height:26px;vertical-align:middle;margin-right:8px;filter:brightness(0) invert(1);"><span>CodePipeline<br><small style="font-weight:400;font-size:0.75rem;opacity:0.7;">Handbook</small></span></a><a href="../../index.html" style="display:block;margin-top:8px;font-size:0.74rem;color:#8899aa;text-decoration:none;padding:3px 0;">← DVA-C02 App</a>
+  </div>
+  <ul class="sidebar-nav">
+    <li><a href="../index.html">🏠 হোম</a></li>
+    <li class="nav-section">চ্যাপ্টারসমূহ</li>
+    <li><a href="01-introduction-aws-codepipeline-basics.html">১. CodePipeline Basics</a></li>
+    <li><a href="02-using-git-repositories-as-source-locations.html">২. Git Repositories as Source</a></li>
+    <li><a href="03-building-your-code-with-aws-codebuild.html">৩. AWS CodeBuild</a></li>
+    <li><a href="04-deploying-to-ec2-instances-with-aws-codedeploy.html">৪. AWS CodeDeploy (EC2)</a></li>
+    <li><a href="05-cloudformation-deploy-actions-manual-approvals-and-notifications.html" class="active">৫. CloudFormation, Approvals &amp; Notifications</a></li>
+    <li><a href="06-building-docker-images-ecs-rolling-deployments.html">৬. Docker &amp; ECS Deployments</a></li>
+    <li class="nav-section">রেফারেন্স</li>
+    <li><a href="../appendix.html">📎 Appendix</a></li>
+  </ul>
+</nav>
+
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+
+<main class="main-content">
+  <header class="chapter-header">
+    <div class="chapter-number">Chapter 5</div>
+    <h1>CloudFormation Deploy Actions, Manual Approvals &amp; Notifications</h1>
+    <p class="chapter-subtitle">CloudFormation দিয়ে automatic staging environment, manual approval gate, action variables, Delete Stack action, superseded executions এবং SNS notification rules-এর সম্পূর্ণ গাইড।</p>
+  </header>
+
+  <!-- In-page TOC -->
+  <nav class="toc-box" aria-label="এই পেজে যা আছে">
+    <h2 class="toc-title">এই পেজে যা আছে</h2>
+    <ol class="toc-list">
+      <li><a href="#what-you-will-learn">এই চ্যাপ্টারে যা শিখবেন</a></li>
+      <li><a href="#cloudformation-deploy-action">CloudFormation Deploy Action — Staging Stack তৈরি</a></li>
+      <li><a href="#staging-codedeploy">Staging-এ CodeDeploy Deploy Action</a></li>
+      <li><a href="#manual-approval">Manual Approval Action যোগ করা</a></li>
+      <li><a href="#action-variables">Action Variables ও Variable Namespace</a></li>
+      <li><a href="#delete-stack-action">CloudFormation Delete Stack Action</a></li>
+      <li><a href="#superseded-executions">Superseded Pipeline Executions</a></li>
+      <li><a href="#notification-rules">Pipeline Notification Rules</a></li>
+      <li><a href="#full-pipeline-diagram">সম্পূর্ণ Pipeline Architecture</a></li>
+      <li><a href="#key-terms">গুরুত্বপূর্ণ শব্দ</a></li>
+      <li><a href="#summary">সারাংশ</a></li>
+      <li><a href="#self-check">নিজেকে যাচাই করুন</a></li>
+    </ol>
+  </nav>
+
+  <!-- What you'll learn -->
+  <section id="what-you-will-learn">
+    <h2>এই চ্যাপ্টারে যা শিখবেন</h2>
+    <ul>
+      <li>CloudFormation deploy action-এর পাঁচটি mode এবং কখন কোনটি ব্যবহার করতে হয়।</li>
+      <li>Pipeline-এ CloudFormation দিয়ে automatic staging environment তৈরি ও delete করা।</li>
+      <li>CloudFormation service role তৈরি এবং CAPABILITY_IAM-এর প্রয়োজনীয়তা।</li>
+      <li>Template parameter values JSON format-এ pipeline action-এ pass করা।</li>
+      <li>SNS topic তৈরি ও email subscribe করে manual approval action configure করা।</li>
+      <li>Action variable ও variable namespace দিয়ে একটি action-এর output অন্য action-এ dynamically reference করা।</li>
+      <li>CloudFormation Delete Stack action দিয়ে staging stack auto-cleanup।</li>
+      <li>Superseded execution কী, কোন condition-এ ঘটে এবং কীভাবে pipeline-কে প্রভাবিত করে।</li>
+      <li>Pipeline-এ notification rule তৈরি এবং existing SNS topic-এ CodeStar publish permission যোগ করা।</li>
+    </ul>
+  </section>
+
+  <!-- Section 1: CloudFormation Deploy Action -->
+  <section id="cloudformation-deploy-action">
+    <h2>CloudFormation Deploy Action — Staging Stack তৈরি</h2>
+
+    <p>CodePipeline-এ CloudFormation deploy action ব্যবহার করে প্রতিটি execution-এ একটি temporary staging environment তৈরি করা যায়। Staging-এ application test করার পর stack delete করা হয়। Production-এ deploy হয় manual approval-এর পরেই।</p>
+
+    <h3>CloudFormation Template প্রস্তুত করা</h3>
+    <p>Source code-এর root-এ <code>cloudformation/staging-stack-template.yaml</code> ফাইল রাখুন। Template-এ থাকা resources:</p>
+    <ul>
+      <li>EC2 instance — staging web server, tag: <code>Environment: Staging</code>।</li>
+      <li>IAM instance profile — WebServerRole attach করার জন্য।</li>
+      <li>Security group — HTTP (80) access allow।</li>
+    </ul>
+    <p>Template parameters:</p>
+    <ul>
+      <li><code>WebServerImage</code> — staging instance-এর AMI ID (previously created web-server-ami)।</li>
+      <li><code>WebServerRoleName</code> — attach করার IAM role-এর নাম।</li>
+    </ul>
+    <p>Template output: <code>WebServerDnsName</code> — staging instance-এর public DNS name।</p>
+
+    <h3>CloudFormation Service Role তৈরি</h3>
+    <ol>
+      <li>IAM Console → <strong>Create role</strong>।</li>
+      <li>Use case: <strong>CloudFormation</strong>।</li>
+      <li>Policies: <code>AmazonEC2FullAccess</code> + <code>IAMFullAccess</code>।
+        <p class="note">⚠️ Full access policy উদাহরণের জন্য। Production-এ শুধু প্রয়োজনীয় specific permissions দিন।</p>
+      </li>
+      <li>Role name: <code>CloudFormationServiceRoleForMyPipeline</code></li>
+    </ol>
+
+    <h3>Pipeline-এ CloudFormation Action যোগ করার ধাপ</h3>
+    <ol>
+      <li>Pipeline → <strong>Edit</strong> → Build ও Deploy stage-এর মাঝে <strong>Add stage</strong> → নাম: <code>Staging</code>।</li>
+      <li>Staging stage-এ <strong>Add action group</strong>।</li>
+      <li>Action name: <code>CreateStagingStack</code></li>
+      <li>Action provider: <strong>AWS CloudFormation</strong> (Deploy group-এ)।</li>
+      <li>Input artifacts: <strong>SourceArtifact</strong> — template source code-এ আছে।</li>
+      <li>Action mode: <strong>Replace a failed stack</strong>।</li>
+      <li>Stack name: <code>StagingStack</code></li>
+      <li>Template: Artifact = SourceArtifact, File = <code>cloudformation/staging-stack-template.yaml</code></li>
+      <li>Capabilities: <strong>CAPABILITY_IAM</strong> — template-এ IAM resource (instance profile) আছে।</li>
+      <li>Role name: <code>CloudFormationServiceRoleForMyPipeline</code></li>
+      <li>Advanced → Parameter overrides (JSON):</li>
+    </ol>
+    <pre><code>{
+  "WebServerImage": "ami-xxxxxxxxxxxxxxxxx",
+  "WebServerRoleName": "WebServerRole"
+}</code></pre>
+    <p>AMI ID: EC2 Console → AMIs → আপনার web-server-ami-এর ID কপি করুন।</p>
+
+    <h3>CloudFormation Action Modes</h3>
+    <div class="comparison-table">
+      <table>
+        <thead>
+          <tr><th>Mode</th><th>আচরণ</th><th>কখন ব্যবহার করবেন</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Create or update a stack</td><td>নেই → create। আছে → update।</td><td>Staging/production stack manage।</td></tr>
+          <tr><td>Replace a failed stack</td><td>Create/update-এর মতো + FAILED state-এর stack replace।</td><td>Staging environment — failed stack-ও recover।</td></tr>
+          <tr><td>Delete a stack</td><td>Stack delete। না থাকলে fail করে না।</td><td>Staging cleanup।</td></tr>
+          <tr><td>Create or replace a change set</td><td>Stack-এ কী পরিবর্তন হবে তার preview।</td><td>Production infra — apply-এর আগে review।</td></tr>
+          <tr><td>Execute a change set</td><td>আগে তৈরি change set apply করে।</td><td>Change set approve করার পরে।</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>Production infrastructure pipeline best practice:</strong><br>
+      Create/Replace Change Set → Manual Approval → Execute Change Set। এতে infra পরিবর্তন review করে approve করা যায়।
+    </div>
+
+    <h3>CloudFormation Stack Status দেখা</h3>
+    <p>Pipeline action-এর <strong>Details</strong> link ক্লিক করলে CloudFormation Console-এ stack details খোলে। <strong>Events</strong> tab-এ resource creation progress, <strong>Resources</strong> tab-এ created resources দেখা যায়। Stack-এর <strong>Outputs</strong> tab-এ exported values (যেমন DNS name) থাকে।</p>
+  </section>
+
+  <!-- Section 2: Staging CodeDeploy -->
+  <section id="staging-codedeploy">
+    <h2>Staging-এ CodeDeploy Deploy Action</h2>
+    <p>CloudFormation stack তৈরির পরে staging instance-এ application deploy করতে একটি আলাদা CodeDeploy deployment group দরকার।</p>
+
+    <h3>Staging Deployment Group তৈরি</h3>
+    <ol>
+      <li>CodeDeploy Console → Application → <strong>Create deployment group</strong>।</li>
+      <li>Name: <code>StagingInstances</code></li>
+      <li>Service role: <code>CodeDeployEC2ServiceRole</code></li>
+      <li>Deployment type: <strong>In-place</strong>।</li>
+      <li>Environment: <strong>Amazon EC2 instances</strong>।</li>
+      <li>Tag: Key=<code>Environment</code>, Value=<code>Staging</code> (CloudFormation template-এ assign করা tag-এর সাথে match করে)।</li>
+      <li>Deployment config: AllAtOnce।</li>
+      <li>Load balancer: Disable।</li>
+      <li>Rollbacks: <strong>Disable</strong> — staging instance temporary, rollback দরকার নেই।</li>
+    </ol>
+
+    <h3>Pipeline-এ DeployToStaging Action যোগ করা</h3>
+    <ol>
+      <li>Staging stage → Edit stage → CreateStagingStack-এর পরে <strong>Add action group</strong>।</li>
+      <li>Action name: <code>DeployToStaging</code></li>
+      <li>Action provider: <strong>AWS CodeDeploy</strong>।</li>
+      <li>Input artifact: <strong>BuildArtifact</strong>।</li>
+      <li>Application: <code>MyAngularApp</code>, Deployment group: <code>StagingInstances</code>।</li>
+    </ol>
+
+    <p>Staging instance-এর DNS name পেতে CloudFormation stack-এর <strong>Outputs</strong> tab দেখুন।</p>
+  </section>
+
+  <!-- Section 3: Manual Approval -->
+  <section id="manual-approval">
+    <h2>Manual Approval Action যোগ করা</h2>
+    <p>Manual approval action pipeline execution pause করে — কেউ manually approve বা reject না করা পর্যন্ত পরবর্তী stage-এ যায় না।</p>
+
+    <h3>SNS Topic তৈরি ও Subscribe করা</h3>
+    <ol>
+      <li>Amazon SNS Console → <strong>Create topic</strong>।</li>
+      <li>Topic name: <code>PipelineNotifications</code></li>
+      <li>Display name: <code>Pipeline Notifications</code> (email sender হিসেবে দেখাবে)।</li>
+      <li><strong>Create subscription</strong> → Protocol: Email → আপনার email address।</li>
+      <li>AWS-এর confirmation email-এ confirm link ক্লিক করুন। Status "Confirmed" হলে ready।</li>
+    </ol>
+
+    <h3>Manual Approval Action কোথায় রাখবেন</h3>
+    <div class="callout callout-warning">
+      <strong>আলাদা stage-এ নয়।</strong> ManualApproval action অবশ্যই Staging stage-এর <em>ভেতরে</em> (DeployToStaging-এর পরে) রাখুন।<br><br>
+      কারণ: যদি আলাদা stage হয়, নতুন execution staging stage-এ enter করে পুরনো staging environment overwrite করতে পারে যখন আগের execution approval-এর অপেক্ষায়। Staging stage-এর ভেতরে রাখলে stage lock থাকে — reviewer সঠিক revision দেখতে পারে।
+    </div>
+
+    <h3>Manual Approval Action Configure করা</h3>
+    <ol>
+      <li>Staging stage → Edit stage → DeployToStaging-এর পরে <strong>Add action group</strong>।</li>
+      <li>Action name: <code>ManualApproval</code></li>
+      <li>Action provider: <strong>Manual approval</strong> (Approval group-এ)।</li>
+      <li>SNS topic ARN: আগে তৈরি topic নির্বাচন করুন।</li>
+      <li>URL for review: staging environment-এর URL (পরে action variable দিয়ে dynamic করা হবে)।</li>
+      <li>Comments: Reviewer-কে দেওয়া instruction।</li>
+    </ol>
+
+    <h3>Manual Approval Notification Email</h3>
+    <p>Approval-এর জন্য অপেক্ষা হলে email-এ পাওয়া যায়:</p>
+    <ul>
+      <li>Pipeline, stage ও action name।</li>
+      <li>"Content to review" — staging URL।</li>
+      <li>"Approve or reject" — pipeline-এ direct link।</li>
+      <li>Custom comment।</li>
+      <li><strong>Deadline: 7 days</strong> — এর মধ্যে কোনো action না নিলে execution fail হয়।</li>
+    </ul>
+
+    <h3>Approve ও Reject</h3>
+    <ul>
+      <li>Pipeline-এ ManualApproval action-এর <strong>Review</strong> বাটন ক্লিক করুন।</li>
+      <li><strong>Approve</strong> → execution পরবর্তী action-এ যায়।</li>
+      <li><strong>Reject</strong> → execution সেখানে fail করে থামে।</li>
+      <li>Comment দেওয়া ভালো practice — developer বুঝতে পারে কেন reject হলো।</li>
+    </ul>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant Dev as Developer
+    participant CP as CodePipeline
+    participant SNS as SNS Topic
+    participant Rev as Reviewer
+
+    Dev->>CP: git push
+    CP->>CP: Source → Build → Staging Deploy
+    CP->>SNS: ManualApproval waiting
+    SNS->>Rev: Email notification
+    Rev->>Rev: Opens staging URL, reviews
+    Rev->>CP: Approve (Review button)
+    CP->>CP: Continue to Production Deploy
+      </div>
+      <p class="diagram-caption">Manual Approval flow: staging deploy → SNS notification → reviewer approves → production deploy।</p>
+    </div>
+  </section>
+
+  <!-- Section 4: Action Variables -->
+  <section id="action-variables">
+    <h2>Action Variables ও Variable Namespace</h2>
+
+    <h3>সমস্যা: Static URL</h3>
+    <p>ManualApproval action-এ staging URL static হিসেবে দেওয়া হয়েছিল। CloudFormation stack delete ও recreate হলে নতুন DNS name assign হয় — URL invalid হয়ে যায়।</p>
+
+    <h3>সমাধান: Action Variables</h3>
+    <p>CloudFormation deploy action stack-এর Outputs-কে <strong>action variable</strong> হিসেবে export করে। পরবর্তী action সেই variable reference করতে পারে।</p>
+
+    <h3>Configure করার ধাপ</h3>
+    <ol>
+      <li>CreateStagingStack action edit করুন।</li>
+      <li>Variable namespace দিন: <code>StagingStackVariables</code></li>
+      <li>ManualApproval action edit করুন।</li>
+      <li>URL for review field-এ:</li>
+    </ol>
+    <pre><code>http://#{StagingStackVariables.WebServerDnsName}</code></pre>
+
+    <h3>Variable Reference Syntax</h3>
+    <pre><code>#{NamespaceName.VariableName}</code></pre>
+
+    <div class="comparison-table">
+      <table>
+        <thead>
+          <tr><th>Action Type</th><th>Namespace Example</th><th>উদাহরণ Variable</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>CloudFormation</td><td>StagingStackVariables</td><td><code>#{StagingStackVariables.WebServerDnsName}</code></td></tr>
+          <tr><td>Source (GitHub)</td><td>SourceVariables</td><td><code>#{SourceVariables.CommitId}</code>, <code>#{SourceVariables.BranchName}</code></td></tr>
+          <tr><td>Source (S3)</td><td>SourceVariables</td><td><code>#{SourceVariables.ETag}</code>, <code>#{SourceVariables.VersionId}</code></td></tr>
+          <tr><td>Manual Approval</td><td>ApprovalVariables</td><td><code>#{ApprovalVariables.ApproverArn}</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    CF["CreateStagingStack\nNamespace:\nStagingStackVariables\n\nOutput:\nWebServerDnsName"] -->|"#{StagingStackVariables\n.WebServerDnsName}"| MA["ManualApproval\nURL for review:\nhttp://#{...}"]
+      </div>
+      <p class="diagram-caption">Action variable: CloudFormation stack output → ManualApproval URL-এ dynamic reference।</p>
+    </div>
+
+    <p>Execution details-এ কোনো action-এর <strong>Output variables</strong> section দেখুন — সব exported variable ও তাদের মান দেখা যাবে।</p>
+  </section>
+
+  <!-- Section 5: Delete Stack -->
+  <section id="delete-stack-action">
+    <h2>CloudFormation Delete Stack Action</h2>
+    <p>Manual approval-এর পরে staging stack আর দরকার নেই। Pipeline-এ Delete Stack action যোগ করে automatic cleanup করা যায়।</p>
+
+    <h3>DeleteStagingStack Action Configure করা</h3>
+    <ol>
+      <li>Staging stage → Edit stage → ManualApproval-এর পরে <strong>Add action group</strong>।</li>
+      <li>Action name: <code>DeleteStagingStack</code></li>
+      <li>Action provider: <strong>AWS CloudFormation</strong>।</li>
+      <li>Input artifacts: <strong>খালি রাখুন</strong> — delete করতে template দরকার নেই।</li>
+      <li>Action mode: <strong>Delete a stack</strong>।</li>
+      <li>Stack name: <code>StagingStack</code>।</li>
+      <li>Role: <code>CloudFormationServiceRoleForMyPipeline</code>।</li>
+    </ol>
+
+    <div class="callout callout-warning">
+      Manual Approval <strong>reject</strong> করলে execution সেখানে fail হয়ে থামে — DeleteStagingStack action-এ পৌঁছায় না। Staging stack তখনো থাকে — developer সেটি দেখে সমস্যা debug করতে পারে। Staging stack manually delete করতে হবে।
+    </div>
+
+    <h3>Staging Stage-এর সম্পূর্ণ Flow</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    CS["CreateStagingStack\n(CloudFormation)\nStaging EC2 তৈরি"] -->|sequential| DS
+    DS["DeployToStaging\n(CodeDeploy)\nApp deploy to staging"] -->|sequential| MA
+    MA["ManualApproval\nReview staging env"] -->|Approved| DEL
+    MA -->|Rejected| FAIL["Execution FAILED\nStack remains for debugging"]
+    DEL["DeleteStagingStack\n(CloudFormation)\nEC2 terminate"] --> PROD["Production Deploy\n(next stage)"]
+      </div>
+      <p class="diagram-caption">Staging stage-এর সম্পূর্ণ sequential flow।</p>
+    </div>
+  </section>
+
+  <!-- Section 6: Superseded Executions -->
+  <section id="superseded-executions">
+    <h2>Superseded Pipeline Executions</h2>
+    <p>একই সময়ে একাধিক execution pipeline-এ থাকলে একটি execution আরেকটিকে supersede করতে পারে।</p>
+
+    <h3>Superseded কী?</h3>
+    <p>যখন কোনো পুরনো execution দুটি stage-এর মাঝখানে (transition-এ) অপেক্ষা করছে, এবং একটি নতুন execution সেখানে এসে পৌঁছায়, তখন পুরনো execution <strong>Superseded</strong> state-এ চলে যায় এবং জীবনচক্র শেষ করে।</p>
+
+    <h3>Key Rule</h3>
+    <ul>
+      <li>কোনো execution stage-এ <strong>enter করলে</strong> সেটিকে supersede করা যায় না — stage lock হয়ে যায়।</li>
+      <li>Superseding শুধুমাত্র stage-এর <strong>বাইরে</strong> (দুটি stage-এর transition-এ) ঘটে।</li>
+    </ul>
+
+    <h3>Example: 3 Concurrent Executions</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph Timeline
+      direction TB
+      E1["Exec 1 (v14.1)\nSource ✅ Build ✅\nStaging: locked at ManualApproval"]
+      E2["Exec 2 (v14.2)\nSource ✅ Build ✅\nWaiting at transition"]
+      E3["Exec 3 (v14.3)\nSource ✅ Build ✅\nCatches up to E2!"]
+    end
+    E3 -->|supersedes| E2
+    E2 --> SUPERSEDED["Exec 2: SUPERSEDED\n(never entered Staging)"]
+    E1 -->|Approved| PROD1["Exec 1 → Production"]
+    E3 -->|Next to enter Staging| STAG3["Exec 3 → Staging → Production"]
+      </div>
+      <p class="diagram-caption">Exec 2 superseded হয় — Staging stage-এ ঢোকার আগেই Exec 3 catch up করে।</p>
+    </div>
+
+    <p>Pipeline history-তে superseded execution-এর status <strong>Superseded</strong> দেখায়। Superseded execution-এ যে stage পর্যন্ত পৌঁছাতে পারেনি সেই stage-এর actions execute হয়নি।</p>
+
+    <div class="callout callout-info">
+      <strong>Real-world benefit:</strong> Developer দ্রুত পরপর অনেক commit push করলে মাঝের versions staging-এ deploy না হয়ে skip হয়ে যায়। শুধু latest version staging-এ যায় — অপ্রয়োজনীয় staging resource তৈরি হয় না, সময় ও cost বাঁচে।
+    </div>
+  </section>
+
+  <!-- Section 7: Notification Rules -->
+  <section id="notification-rules">
+    <h2>Pipeline Notification Rules</h2>
+    <p>Pipeline execution-এর status change হলে SNS-এর মাধ্যমে notification পাঠানো যায়।</p>
+
+    <h3>Notification Types</h3>
+    <div class="comparison-table">
+      <table>
+        <thead><tr><th>Event Category</th><th>কী notify করে</th><th>Recommended?</th></tr></thead>
+        <tbody>
+          <tr><td>Pipeline execution states</td><td>Started, Succeeded, Failed, Superseded, etc.</td><td>✅ হ্যাঁ</td></tr>
+          <tr><td>Stage execution states</td><td>প্রতিটি stage-এর status change</td><td>❌ অনেক email</td></tr>
+          <tr><td>Action execution states</td><td>প্রতিটি action-এর status change</td><td>❌ অনেক বেশি</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Notification Rule তৈরি (সহজ পদ্ধতি — নতুন SNS topic)</h3>
+    <ol>
+      <li>Pipeline → Settings → <strong>Notifications</strong> tab → <strong>Create notification rule</strong>।</li>
+      <li>Rule name: <code>PipelineNotificationsRule</code></li>
+      <li>Detail type: <strong>Full</strong>।</li>
+      <li>Events: <strong>Pipeline execution states</strong> (Started, Succeeded, Failed, Superseded)।</li>
+      <li>Target: <strong>Create target</strong> বাটনে নতুন SNS topic তৈরি করুন — policy automatically configure হবে।</li>
+      <li>Email subscribe করুন।</li>
+    </ol>
+
+    <h3>Existing SNS Topic ব্যবহার করা (Manual Permission)</h3>
+    <p>Existing topic ব্যবহার করলে topic-এর access policy-তে CodeStar-কে publish করার permission দিতে হবে।</p>
+    <p>SNS topic → <strong>Edit</strong> → Access policy-তে নিচের statement যোগ করুন:</p>
+    <pre><code>{
+  "Sid": "AWSCodeStarNotifications_publish",
+  "Effect": "Allow",
+  "Principal": {
+    "Service": "codestar-notifications.amazonaws.com"
+  },
+  "Action": "SNS:Publish",
+  "Resource": "arn:aws:sns:REGION:ACCOUNT-ID:TOPIC-NAME"
+}</code></pre>
+
+    <div class="callout callout-info">
+      <strong>কেন CodeStar?</strong> AWS Developer Tools-এর built-in notification feature CodeStar Notifications service ব্যবহার করে — এটি একটি separate service principal। Pipeline-এর service role-এর permission এখানে apply হয় না।
+    </div>
+
+    <h3>Notification Format</h3>
+    <ul>
+      <li><strong>Pipeline notification (JSON format):</strong> execution ID, pipeline name, state, region ইত্যাদি। Third-party integration-এ উপযুক্ত।</li>
+      <li><strong>Manual Approval notification (text format):</strong> Human-readable, review URL ও approve/reject link সহ।</li>
+    </ul>
+  </section>
+
+  <!-- Section 8: Full Pipeline Diagram -->
+  <section id="full-pipeline-diagram">
+    <h2>সম্পূর্ণ Pipeline Architecture</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    GH["GitHub\nmaster branch"] -->|git push| SRC["Source Stage\nSourceArtifact"]
+    SRC --> BUILD["Build Stage\nUnitTest (CodeBuild)\n→ Build (CodeBuild)\nBuildArtifact"]
+
+    BUILD --> STAG_STAGE
+
+    subgraph STAG_STAGE["Staging Stage (locked during approval)"]
+      direction TB
+      A1["CreateStagingStack\nCloudFormation\nEC2 instance create"] --> A2
+      A2["DeployToStaging\nCodeDeploy\nApp deploy"] --> A3
+      A3["ManualApproval\nReview + Approve/Reject"] -->|Approved| A4
+      A4["DeleteStagingStack\nCloudFormation\nEC2 terminate"]
+    end
+
+    STAG_STAGE --> DEPLOY["Production Deploy Stage\nCodeDeploy Blue/Green\nASG + ALB"]
+      </div>
+      <p class="diagram-caption">সম্পূর্ণ CI/CD pipeline: Source → Build → Staging (CloudFormation + CodeDeploy + ManualApproval) → Production।</p>
+    </div>
+  </section>
+
+  <!-- Key Terms -->
+  <section id="key-terms">
+    <h2>গুরুত্বপূর্ণ শব্দ</h2>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <dt>CloudFormation Stack</dt>
+        <dd>Template থেকে তৈরি AWS resources-এর collection।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>CAPABILITY_IAM</dt>
+        <dd>Template-এ IAM resource থাকলে এই capability প্রয়োজন।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Parameter Override</dt>
+        <dd>Pipeline action-এ CloudFormation template parameter-এর value JSON-এ দেওয়া।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Change Set</dt>
+        <dd>Stack-এ কী পরিবর্তন হবে তার preview — execute না করলে apply হয় না।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Manual Approval Action</dt>
+        <dd>Execution pause করে manual review ও approval/rejection-এর action।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Variable Namespace</dt>
+        <dd>Action-এর output variables-এর prefix identifier।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>#{Namespace.Variable}</dt>
+        <dd>Action variable reference syntax।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Superseded Execution</dt>
+        <dd>Stage-এর বাইরে নতুন execution দ্বারা replace হওয়া পুরনো execution।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Notification Rule</dt>
+        <dd>Pipeline events-এ SNS notification পাঠানোর rule।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>codestar-notifications.amazonaws.com</dt>
+        <dd>AWS Developer Tools notification-এর service principal।</dd>
+      </div>
+    </div>
+  </section>
+
+  <!-- Summary -->
+  <section id="summary">
+    <h2>সারাংশ</h2>
+    <ul>
+      <li>CloudFormation deploy action দিয়ে প্রতিটি pipeline execution-এ automatic staging environment তৈরি ও delete করা যায়।</li>
+      <li>Template-এ IAM resource থাকলে <strong>CAPABILITY_IAM</strong> capability অবশ্যই দিতে হবে।</li>
+      <li>Manual Approval action staging stage-এর <em>ভেতরে</em> রাখুন — তাহলে stage lock থাকবে, reviewer সঠিক revision দেখবে।</li>
+      <li>Action variable: <code>#{Namespace.Variable}</code> syntax দিয়ে একটি action-এর output অন্য action-এ dynamically reference করুন।</li>
+      <li>Delete Stack action approval-এর পরে staging resource auto-cleanup করে।</li>
+      <li>Superseded: stage-এর বাইরে থাকা পুরনো execution নতুন execution দ্বারা replace হয়।</li>
+      <li>Notification rule-এ "Create target" দিয়ে নতুন SNS topic তৈরি করলে policy auto-configure। Existing topic-এ <code>codestar-notifications.amazonaws.com</code>-এর SNS:Publish permission দিতে হবে।</li>
+    </ul>
+  </section>
+
+  <!-- Self Check -->
+  <section id="self-check">
+    <h2>নিজেকে যাচাই করুন</h2>
+
+    <details>
+      <summary>১. CloudFormation template-এ IAM resource থাকলে pipeline action-এ কী বাড়তি configuration দিতে হয়?</summary>
+      <div class="answer">
+        <p>CloudFormation deploy action-এর <strong>Capabilities</strong> section-এ <strong>CAPABILITY_IAM</strong> নির্বাচন করতে হবে। এটি না দিলে CloudFormation stack creation fail করবে কারণ IAM resource তৈরিতে explicit acknowledgment প্রয়োজন।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>২. Manual Approval action কেন আলাদা stage-এ না রেখে Staging stage-এর ভেতরে রাখা উচিত?</summary>
+      <div class="answer">
+        <p>আলাদা stage-এ রাখলে নতুন execution Staging stage-এ enter করতে পারে এবং staging environment overwrite করতে পারে যখন পুরনো execution approval-এর অপেক্ষায়। Staging stage-এর ভেতরে রাখলে সেই stage lock থাকে — reviewer সঠিক revision-ই দেখতে পাবে।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৩. Action variable syntax কী এবং CloudFormation output কীভাবে ManualApproval-এ ব্যবহার করবেন?</summary>
+      <div class="answer">
+        <p>Syntax: <code>#{NamespaceName.VariableName}</code></p>
+        <p>Steps:</p>
+        <ol>
+          <li>CreateStagingStack action-এ Variable namespace দিন: <code>StagingStackVariables</code></li>
+          <li>ManualApproval-এর URL for review field-এ: <code>http://#{StagingStackVariables.WebServerDnsName}</code></li>
+        </ol>
+        <p>এখন প্রতিটি execution-এ নতুন staging DNS name automatically URL-এ inject হবে।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৪. Superseded execution কখন ঘটে? Stage lock হয়ে থাকলে কি supersede হয়?</summary>
+      <div class="answer">
+        <p>Superseded ঘটে যখন কোনো execution দুটি stage-এর <strong>মাঝে (transition-এ)</strong> অপেক্ষা করছে এবং নতুন execution সেখানে এসে পৌঁছায়।</p>
+        <p>Stage <strong>lock</strong> হয়ে গেলে (execution stage-এ enter করলে) supersede হয় না — lock remove না হওয়া পর্যন্ত নতুন execution বাইরে অপেক্ষা করে।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৫. Existing SNS topic-এ pipeline notification পাঠাতে কোন permission দিতে হবে এবং কেন pipeline service role কাজ করে না?</summary>
+      <div class="answer">
+        <p>SNS topic-এর access policy-তে <code>codestar-notifications.amazonaws.com</code> service principal-কে <code>SNS:Publish</code> permission দিতে হবে।</p>
+        <p>Pipeline service role কাজ করে না কারণ notification AWS CodeStar Notifications service-এর মাধ্যমে পাঠানো হয় — এটি একটি separate AWS service principal, pipeline-এর IAM role নয়।</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- Chapter Navigation -->
+  <nav class="chapter-nav">
+    <a href="04-deploying-to-ec2-instances-with-aws-codedeploy.html" class="chapter-nav-prev">← পূর্ববর্তী: AWS CodeDeploy</a>
+    <a href="06-building-docker-images-ecs-rolling-deployments.html" class="chapter-nav-next">পরবর্তী: Docker &amp; ECS →</a>
+  </nav>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

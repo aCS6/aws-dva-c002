@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Appendix — CLI Cheatsheet, Glossary &amp; Troubleshooting | CodePipeline Handbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .appendix-toc { max-width: 860px; margin: 28px 48px 8px; }
+    @media (max-width: 900px) { .appendix-toc { margin: 20px 24px 8px; } }
+    .cheatsheet-block { margin-bottom: 32px; }
+    .cheatsheet-block h3 { margin-top: 0; }
+    .trouble-table { overflow-x: auto; margin: 12px 0 20px; }
+    .trouble-table table { font-size: 0.875rem; }
+    .trouble-table td { vertical-align: top; }
+    .trouble-table td:first-child { white-space: nowrap; font-weight: 600; color: #c0392b; }
+    .trouble-table td:nth-child(2) { color: #6b4800; }
+    .trouble-table td:nth-child(3) { color: #12542a; }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar Nav -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="index.html" class="sidebar-logo" title="← Back to DVA App">
+      <img src="../media/code-pipeline.svg" alt="CodePipeline" style="width:26px;height:26px;vertical-align:middle;margin-right:8px;filter:brightness(0) invert(1);">
+      <span>CodePipeline<br><small style="font-weight:400;font-size:0.75rem;opacity:0.7;">Handbook</small></span>
+    </a>
+    <a href="../../index.html" style="display:block;margin-top:8px;font-size:0.74rem;color:#8899aa;text-decoration:none;padding:3px 0;">← DVA-C02 App</a>
+  </div>
+  <ul class="sidebar-nav">
+    <li><a href="index.html">🏠 হোম</a></li>
+    <li class="nav-section">চ্যাপ্টারসমূহ</li>
+    <li><a href="chapters/01-introduction-aws-codepipeline-basics.html">১. CodePipeline Basics</a></li>
+    <li><a href="chapters/02-using-git-repositories-as-source-locations.html">২. Git Repositories as Source</a></li>
+    <li><a href="chapters/03-building-your-code-with-aws-codebuild.html">৩. AWS CodeBuild</a></li>
+    <li><a href="chapters/04-deploying-to-ec2-instances-with-aws-codedeploy.html">৪. AWS CodeDeploy (EC2)</a></li>
+    <li><a href="chapters/05-cloudformation-deploy-actions-manual-approvals-and-notifications.html">৫. CloudFormation, Approvals &amp; Notifications</a></li>
+    <li><a href="chapters/06-building-docker-images-ecs-rolling-deployments.html">৬. Docker &amp; ECS Deployments</a></li>
+    <li class="nav-section">রেফারেন্স</li>
+    <li><a href="appendix.html" class="active">📎 Appendix</a></li>
+  </ul>
+</nav>
+
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+
+<main class="main-content">
+  <header class="chapter-header">
+    <div class="chapter-number">Appendix</div>
+    <h1>CLI Cheatsheet, Glossary &amp; Troubleshooting</h1>
+    <p class="chapter-subtitle">সম্পূর্ণ CLI command reference, buildspec/appspec/imagedefinitions syntax, সব চ্যাপ্টারের glossary এবং সমস্যা সমাধান টেবিল।</p>
+  </header>
+
+  <!-- TOC -->
+  <nav class="toc-box appendix-toc" aria-label="এই পেজে যা আছে">
+    <h2 class="toc-title">এই পেজে যা আছে</h2>
+    <ol class="toc-list">
+      <li><a href="#cli-codepipeline">CodePipeline CLI Commands</a></li>
+      <li><a href="#cli-codebuild">CodeBuild CLI Commands</a></li>
+      <li><a href="#cli-codedeploy">CodeDeploy CLI Commands</a></li>
+      <li><a href="#cli-ecr-ecs">ECR &amp; ECS CLI Commands</a></li>
+      <li><a href="#buildspec-reference">buildspec.yml Reference</a></li>
+      <li><a href="#appspec-reference">appspec.yml Reference (EC2)</a></li>
+      <li><a href="#imagedefinitions-reference">imagedefinitions.json Reference</a></li>
+      <li><a href="#glossary">শব্দকোষ (Glossary)</a></li>
+      <li><a href="#troubleshooting">সমস্যা সমাধান (Troubleshooting)</a></li>
+    </ol>
+  </nav>
+
+  <!-- CLI: CodePipeline -->
+  <section id="cli-codepipeline">
+    <h2>CodePipeline CLI Commands</h2>
+    <div class="cheatsheet-block">
+      <pre><code># Pipeline list দেখা
+aws codepipeline list-pipelines
+
+# Pipeline-এর details দেখা
+aws codepipeline get-pipeline --name MyPipeline
+
+# Pipeline manually trigger করা (Release change)
+aws codepipeline start-pipeline-execution --name MyPipeline
+
+# Pipeline execution state দেখা
+aws codepipeline get-pipeline-execution \
+  --pipeline-name MyPipeline \
+  --pipeline-execution-id EXECUTION_ID
+
+# সব execution history দেখা
+aws codepipeline list-pipeline-executions --pipeline-name MyPipeline
+
+# Execution stop করা
+aws codepipeline stop-pipeline-execution \
+  --pipeline-name MyPipeline \
+  --pipeline-execution-id EXECUTION_ID \
+  --abandon  # অথবা ছাড়া (wait for in-progress actions)
+
+# Manual approval approve করা
+aws codepipeline put-approval-result \
+  --pipeline-name MyPipeline \
+  --stage-name Staging \
+  --action-name ManualApproval \
+  --result "summary=Approved,status=Approved" \
+  --token TOKEN_FROM_APPROVAL_ACTION
+
+# Transition enable/disable
+aws codepipeline disable-stage-transition \
+  --pipeline-name MyPipeline \
+  --stage-name Deploy \
+  --transition-type Inbound \
+  --reason "Maintenance"
+
+aws codepipeline enable-stage-transition \
+  --pipeline-name MyPipeline \
+  --stage-name Deploy \
+  --transition-type Inbound
+
+# Pipeline delete করা
+aws codepipeline delete-pipeline --name MyPipeline</code></pre>
+    </div>
+  </section>
+
+  <!-- CLI: CodeBuild -->
+  <section id="cli-codebuild">
+    <h2>CodeBuild CLI Commands</h2>
+    <div class="cheatsheet-block">
+      <pre><code># Build project list
+aws codebuild list-projects
+
+# Build project details
+aws codebuild batch-get-projects --names MyAngularBuild
+
+# Build manually start করা
+aws codebuild start-build --project-name MyAngularBuild
+
+# চলমান build-এর status দেখা
+aws codebuild batch-get-builds --ids BUILD_ID
+
+# সাম্প্রতিক build history
+aws codebuild list-builds-for-project --project-name MyAngularBuild
+
+# Build log দেখা (CloudWatch Logs)
+aws logs get-log-events \
+  --log-group-name /aws/codebuild/MyAngularBuild \
+  --log-stream-name BUILD_ID
+
+# Build project delete
+aws codebuild delete-project --name MyAngularBuild</code></pre>
+    </div>
+  </section>
+
+  <!-- CLI: CodeDeploy -->
+  <section id="cli-codedeploy">
+    <h2>CodeDeploy CLI Commands</h2>
+    <div class="cheatsheet-block">
+      <pre><code># Application list
+aws deploy list-applications
+
+# Deployment group list
+aws deploy list-deployment-groups --application-name MyAngularApp
+
+# Deployment create করা (manual)
+aws deploy create-deployment \
+  --application-name MyAngularApp \
+  --deployment-group-name TaggedEC2Instances \
+  --s3-location bucket=my-bucket,key=my-artifact.zip,bundleType=zip
+
+# Deployment status দেখা
+aws deploy get-deployment --deployment-id DEPLOYMENT_ID
+
+# Deployment list (application-এর জন্য)
+aws deploy list-deployments \
+  --application-name MyAngularApp \
+  --deployment-group-name MyAutoScalingGroup
+
+# Deployment rollback করা
+aws deploy stop-deployment --deployment-id DEPLOYMENT_ID
+
+# EC2 instance-এ CodeDeploy agent status
+sudo service codedeploy-agent status
+sudo service codedeploy-agent start
+sudo service codedeploy-agent stop
+
+# Deployment log (EC2-তে)
+cat /opt/codedeploy-agent/deployment-root/deployment-logs/codedeploy-agent-deployments.log</code></pre>
+    </div>
+  </section>
+
+  <!-- CLI: ECR & ECS -->
+  <section id="cli-ecr-ecs">
+    <h2>ECR &amp; ECS CLI Commands</h2>
+    <div class="cheatsheet-block">
+      <h3>Amazon ECR</h3>
+      <pre><code># ECR login (private registry)
+aws ecr get-login-password --region eu-west-1 | \
+  docker login --username AWS --password-stdin \
+  ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com
+
+# ECR Public Gallery login (us-east-1 required)
+aws ecr-public get-login-password --region us-east-1 | \
+  docker login --username AWS --password-stdin public.ecr.aws
+
+# Repository তৈরি করা
+aws ecr create-repository --repository-name my-angular-app
+
+# Repository list
+aws ecr describe-repositories
+
+# Image list
+aws ecr describe-images --repository-name my-angular-app
+
+# Image tag দিয়ে push করা
+docker tag my-app:latest ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/my-angular-app:latest
+docker push ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/my-angular-app:latest
+
+# Untagged images delete করা
+aws ecr batch-delete-image \
+  --repository-name my-angular-app \
+  --image-ids imageTag=latest</code></pre>
+
+      <h3>Amazon ECS</h3>
+      <pre><code># Cluster list
+aws ecs list-clusters
+
+# Service list
+aws ecs list-services --cluster my-cluster
+
+# Service details
+aws ecs describe-services --cluster my-cluster --services my-rolling-service
+
+# Service update (new task definition revision দিয়ে)
+aws ecs update-service \
+  --cluster my-cluster \
+  --service my-rolling-service \
+  --task-definition my-angular-task-definition:REVISION
+
+# Running tasks list
+aws ecs list-tasks --cluster my-cluster --service-name my-rolling-service
+
+# Task definition list
+aws ecs list-task-definitions --family-prefix my-angular-task-definition
+
+# Task definition register (JSON থেকে)
+aws ecs register-task-definition --cli-input-json file://task-definition.json
+
+# Force new deployment
+aws ecs update-service \
+  --cluster my-cluster \
+  --service my-rolling-service \
+  --force-new-deployment</code></pre>
+    </div>
+  </section>
+
+  <!-- buildspec reference -->
+  <section id="buildspec-reference">
+    <h2>buildspec.yml Reference</h2>
+
+    <h3>সম্পূর্ণ Structure</h3>
+    <pre><code>version: 0.2
+
+# Environment variables (optional)
+env:
+  variables:
+    MY_VAR: "plaintext-value"
+    ECR_REPO_NAME: my-angular-app
+  parameter-store:
+    DOCKERHUB_TOKEN: /dockerhub/token
+    DOCKERHUB_USER: /dockerhub/user
+  secrets-manager:
+    DB_PASSWORD: myapp/prod:db_password
+
+phases:
+  install:               # Runtime ও tools install
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - npm install -g @angular/cli@17
+
+  pre_build:             # Dependencies ও login
+    commands:
+      - npm install
+      # ECR login
+      - ECR_MAIN_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+      - aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_MAIN_URI}
+
+  build:                 # Main build commands
+    commands:
+      - ng build -c production
+    finally:             # Success বা fail — always runs
+      - echo "Build finished"
+
+  post_build:            # Push, notifications, etc.
+    commands:
+      - docker push ${ECR_IMAGE_URI}
+      - printf '[{"name":"angular-app","imageUri":"%s"}]' ${ECR_IMAGE_URI} > imagedefinitions.json
+
+# Build artifacts (optional)
+artifacts:
+  base-directory: dist/my-angular-project    # Angular build output
+  files:
+    - "**/*"
+
+# Alternatively, for ECS deploy:
+# artifacts:
+#   files:
+#     - imagedefinitions.json
+
+# Test reports (optional)
+reports:
+  my-test-report:
+    files:
+      - "**/*.xml"
+    base-directory: test-results</code></pre>
+
+    <h3>Built-in CodeBuild Environment Variables</h3>
+    <div class="comparison-table">
+      <table>
+        <thead><tr><th>Variable</th><th>মান</th></tr></thead>
+        <tbody>
+          <tr><td><code>AWS_REGION</code></td><td>Build-এর AWS region (e.g., eu-west-1)</td></tr>
+          <tr><td><code>AWS_DEFAULT_REGION</code></td><td>AWS_REGION-এর alias</td></tr>
+          <tr><td><code>CODEBUILD_BUILD_ID</code></td><td>Unique build ID</td></tr>
+          <tr><td><code>CODEBUILD_BUILD_SUCCEEDING</code></td><td>1 = succeeding, 0 = failing</td></tr>
+          <tr><td><code>CODEBUILD_RESOLVED_SOURCE_VERSION</code></td><td>Git commit ID (40 chars) — CodePipeline থেকে pass হয়</td></tr>
+          <tr><td><code>CODEBUILD_SRC_DIR</code></td><td>Source code-এর local path</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Runtime Versions (Ubuntu standard)</h3>
+    <pre><code>runtime-versions:
+  nodejs: 20        # Node.js 20
+  python: 3.11      # Python 3.11
+  java: corretto17  # Amazon Corretto 17 (Java)
+  dotnet: 6         # .NET 6
+  golang: 1.21      # Go 1.21</code></pre>
+  </section>
+
+  <!-- appspec reference -->
+  <section id="appspec-reference">
+    <h2>appspec.yml Reference (EC2)</h2>
+
+    <h3>সম্পূর্ণ Structure</h3>
+    <pre><code>version: 0.0
+os: linux   # অথবা windows
+
+# কোন files কোথায় copy করবে
+files:
+  - source: dist/my-angular-project   # revision-এ relative path
+    destination: /var/www/my-angular-project
+
+# Optional: file permissions
+permissions:
+  - object: /var/www/my-angular-project
+    pattern: "**"
+    mode: "0755"
+    owner: root
+    group: root
+    type:
+      - file
+      - directory
+
+# Deployment lifecycle event hooks
+hooks:
+  ApplicationStop:
+    - location: deploy-scripts/stop-app.sh
+      timeout: 300
+
+  BeforeInstall:
+    - location: deploy-scripts/before-install.sh
+      timeout: 300
+
+  AfterInstall:
+    - location: deploy-scripts/after-install.sh
+      timeout: 300
+
+  ApplicationStart:
+    - location: deploy-scripts/application-start-hook.sh
+      timeout: 300
+      runas: root    # optional
+
+  ValidateService:
+    - location: deploy-scripts/validate.sh
+      timeout: 300</code></pre>
+
+    <h3>application-start-hook.sh উদাহরণ</h3>
+    <pre><code>#!/bin/bash
+
+# Nginx web server restart করুন
+sudo service nginx restart</code></pre>
+
+    <h3>Buildspec artifacts section (CodeDeploy-এর জন্য)</h3>
+    <pre><code>artifacts:
+  files:
+    - dist/my-angular-project/**/*   # deployable files
+    - appspec.yml                     # CodeDeploy spec
+    - deploy-scripts/**/*             # hook scripts
+  # base-directory সরিয়ে ফেলুন — সব path root থেকে</code></pre>
+
+    <h3>Lifecycle Events Summary (EC2, without ALB)</h3>
+    <pre><code>ApplicationStop → DownloadBundle → BeforeInstall → Install
+→ AfterInstall → ApplicationStart → ValidateService</code></pre>
+
+    <h3>Lifecycle Events (EC2, with ALB)</h3>
+    <pre><code>BeforeBlockTraffic → BlockTraffic → AfterBlockTraffic
+→ ApplicationStop → DownloadBundle → BeforeInstall → Install
+→ AfterInstall → ApplicationStart → ValidateService
+→ BeforeAllowTraffic → AllowTraffic → AfterAllowTraffic</code></pre>
+
+    <p class="note">⚠️ ECS/Lambda-তে appspec file-এর নাম <code>appspec.yaml</code> (yaml extension), EC2-তে <code>appspec.yml</code> (yml)।</p>
+  </section>
+
+  <!-- imagedefinitions reference -->
+  <section id="imagedefinitions-reference">
+    <h2>imagedefinitions.json Reference</h2>
+
+    <h3>Format</h3>
+    <pre><code>[
+  {
+    "name": "CONTAINER_NAME_IN_TASK_DEFINITION",
+    "imageUri": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/REPO:TAG"
+  }
+]</code></pre>
+
+    <h3>Multiple containers</h3>
+    <pre><code>[
+  {
+    "name": "web",
+    "imageUri": "123456.dkr.ecr.eu-west-1.amazonaws.com/my-app:abc12345"
+  },
+  {
+    "name": "sidecar",
+    "imageUri": "123456.dkr.ecr.eu-west-1.amazonaws.com/my-sidecar:abc12345"
+  }
+]</code></pre>
+
+    <h3>buildspec-এ dynamic generation</h3>
+    <pre><code>post_build:
+  commands:
+    # Commit ID দিয়ে ECR image URI
+    - ECR_IMAGE_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/my-angular-app:${CODEBUILD_RESOLVED_SOURCE_VERSION:0:8}
+    
+    # imagedefinitions.json তৈরি
+    - printf '[{"name":"angular-app","imageUri":"%s"}]' ${ECR_IMAGE_URI} > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json</code></pre>
+  </section>
+
+  <!-- Glossary -->
+  <section id="glossary">
+    <h2>শব্দকোষ (Glossary)</h2>
+
+    <h3>AWS CodePipeline</h3>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <dt>Pipeline</dt>
+        <dd>Software change-এর release workflow।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Stage</dt>
+        <dd>Pipeline-এ action-এর logical group।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Action</dt>
+        <dd>Stage-এর মধ্যে একটি নির্দিষ্ট কাজ (build, test, deploy)।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Action Group</dt>
+        <dd>একই stage-এ parallel action-এর set।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Artifact</dt>
+        <dd>Action-এর output file, পরবর্তী action-এর input।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Artifact Store</dt>
+        <dd>Artifact রাখার S3 bucket, region-ভিত্তিক।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Transition</dt>
+        <dd>দুটি stage-এর মধ্যে flow connector, enable/disable করা যায়।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Source Revision</dt>
+        <dd>Source location-এ পরিবর্তন — pipeline trigger করে।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Execution ID</dt>
+        <dd>প্রতিটি pipeline execution-এর unique ID।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Superseded</dt>
+        <dd>Stage-এর বাইরে নতুন execution দ্বারা replaced পুরনো execution।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Variable Namespace</dt>
+        <dd>Action output variables-এর prefix, অন্য action-এ reference করতে ব্যবহার।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>#{NS.Var}</dt>
+        <dd>Action variable reference syntax।</dd>
+      </div>
+    </div>
+
+    <h3>AWS CodeBuild</h3>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <dt>buildspec.yml</dt>
+        <dd>CodeBuild-কে build instruction দেওয়ার YAML file।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Build Phase</dt>
+        <dd>install, pre_build, build, post_build।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>finally block</dt>
+        <dd>Phase succeed বা fail নির্বিশেষে execute হওয়া commands।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Privileged Mode</dt>
+        <dd>Docker image build করতে Docker daemon access।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>CODEBUILD_RESOLVED_SOURCE_VERSION</dt>
+        <dd>40-char Git commit ID — CodePipeline pass করে।</dd>
+      </div>
+    </div>
+
+    <h3>AWS CodeDeploy</h3>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <dt>CodeDeploy Agent</dt>
+        <dd>EC2-তে installed software — deployment poll ও execute করে।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>appspec.yml</dt>
+        <dd>CodeDeploy deployment specification file।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Deployment Group</dt>
+        <dd>Deploy target — tagged EC2 বা ASG।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>In-Place Deployment</dt>
+        <dd>Existing instance-এ deploy।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Blue/Green Deployment</dt>
+        <dd>নতুন instance fleet তৈরি করে deploy, traffic switch।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>AllAtOnce / OneAtATime</dt>
+        <dd>Deployment configuration — সব একসাথে বা একটি একটি।</dd>
+      </div>
+    </div>
+
+    <h3>Amazon ECS &amp; ECR</h3>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <dt>Amazon ECR</dt>
+        <dd>AWS managed Docker image registry।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>ECS Task Definition</dt>
+        <dd>Container spec — image, CPU, memory, ports।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>ECS Service</dt>
+        <dd>Desired tasks count সবসময় running রাখার mechanism।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>ECS Cluster</dt>
+        <dd>Tasks/services-এর logical group।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Fargate</dt>
+        <dd>Serverless ECS infrastructure — AWS managed।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>imagedefinitions.json</dt>
+        <dd>ECS deploy action-এর contract — container name + image URI।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Deployment Circuit Breaker</dt>
+        <dd>ECS automatic failure detection — 10+ task failures।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Min/Max Running Tasks</dt>
+        <dd>Rolling deployment-এর task count control percentage।</dd>
+      </div>
+    </div>
+
+    <h3>AWS CloudFormation</h3>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <dt>CloudFormation Stack</dt>
+        <dd>Template থেকে তৈরি AWS resources-এর collection।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>CAPABILITY_IAM</dt>
+        <dd>Template-এ IAM resource থাকলে required capability।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Change Set</dt>
+        <dd>Stack-এ কী পরিবর্তন হবে তার preview।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Parameter Override</dt>
+        <dd>Pipeline action-এ template parameter value JSON-এ pass।</dd>
+      </div>
+    </div>
+  </section>
+
+  <!-- Troubleshooting -->
+  <section id="troubleshooting">
+    <h2>সমস্যা সমাধান (Troubleshooting)</h2>
+
+    <h3>AWS CodePipeline</h3>
+    <div class="trouble-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Symptom (লক্ষণ)</th>
+            <th>সম্ভাব্য কারণ</th>
+            <th>সমাধান</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Pipeline trigger হচ্ছে না</td>
+            <td>Source bucket-এ versioning off / CloudWatch Events rule নেই / transition disabled</td>
+            <td>S3 versioning enable করুন। Pipeline settings-এ CloudWatch Events rule আছে কিনা চেক করুন। Transition enable করুন।</td>
+          </tr>
+          <tr>
+            <td>Pipeline stage fail with "Access Denied"</td>
+            <td>Pipeline service role-এ insufficient permissions</td>
+            <td>IAM Console-এ pipeline-এর service role-এ missing permissions যোগ করুন।</td>
+          </tr>
+          <tr>
+            <td>Cross-region deploy action networking error</td>
+            <td>Second region-এ artifact store নেই</td>
+            <td>Second region-এ একটি temp pipeline তৈরি ও execute করুন — artifact store auto-create হবে।</td>
+          </tr>
+          <tr>
+            <td>Manual Approval URL invalid</td>
+            <td>Static URL হার্ডকোড, stack recreate-এ DNS change হয়েছে</td>
+            <td>CloudFormation action-এ variable namespace দিন। Approval URL-এ <code>#{NS.OutputKey}</code> reference করুন।</td>
+          </tr>
+          <tr>
+            <td>Execution "Superseded" state-এ আটকে আছে</td>
+            <td>Newer execution পুরনোটিকে replace করেছে</td>
+            <td>Normal behavior। History-তে দেখুন। Staging stage আগে ঠিক করুন।</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>AWS CodeBuild</h3>
+    <div class="trouble-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Symptom</th>
+            <th>সম্ভাব্য কারণ</th>
+            <th>সমাধান</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>YAML_FILE_ERROR: buildspec not found</td>
+            <td>Source code-এর root-এ buildspec.yml নেই</td>
+            <td>buildspec.yml অবশ্যই root-এ থাকতে হবে। Custom path হলে CodeBuild project-এ specify করুন।</td>
+          </tr>
+          <tr>
+            <td>docker: Cannot connect to the Docker daemon</td>
+            <td>Privileged mode disabled</td>
+            <td>CodeBuild project-এ Environment → <strong>Privileged</strong> checkbox enable করুন।</td>
+          </tr>
+          <tr>
+            <td>toomanyrequests: Too Many Requests (Docker Hub)</td>
+            <td>Unauthenticated Docker Hub pull limit reached</td>
+            <td>pre_build-এ Docker Hub login যোগ করুন। অথবা ECR Public Gallery ব্যবহার করুন।</td>
+          </tr>
+          <tr>
+            <td>no basic auth credentials (ECR)</td>
+            <td>ECR login command নেই বা IAM permission নেই</td>
+            <td>pre_build-এ <code>aws ecr get-login-password</code> command যোগ করুন। Role-এ ECR permissions দিন।</td>
+          </tr>
+          <tr>
+            <td>SecretValueNotFound / ParameterNotFound</td>
+            <td>IAM role-এ Secrets Manager / SSM permission নেই</td>
+            <td>CodeBuild role-এ <code>secretsmanager:GetSecretValue</code> বা <code>ssm:GetParameters</code> policy যোগ করুন।</td>
+          </tr>
+          <tr>
+            <td>Runtime version not found</td>
+            <td>Buildspec-এ requested runtime CodeBuild image-এ নেই</td>
+            <td>CodeBuild Runtime Versions reference দেখুন। Correct image version নির্বাচন করুন (e.g., standard:7.0 for Node 20)।</td>
+          </tr>
+          <tr>
+            <td>upload_artifacts phase error</td>
+            <td>Build phase-এ failure — artifact folder তৈরি হয়নি</td>
+            <td>আগের phase-এর log check করুন। Build command success হয়েছে কিনা দেখুন।</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>AWS CodeDeploy</h3>
+    <div class="trouble-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Symptom</th>
+            <th>সম্ভাব্য কারণ</th>
+            <th>সমাধান</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>BeforeInstall: ScriptMissing / appspec.yml not found</td>
+            <td>Build artifact-এ appspec.yml নেই</td>
+            <td>buildspec.yml-এর artifacts section-এ <code>appspec.yml</code> include করুন। <code>base-directory</code> সরিয়ে ফেলুন।</td>
+          </tr>
+          <tr>
+            <td>Deployment fails at DownloadBundle</td>
+            <td>EC2 instance-এর IAM role-এ S3 permission নেই</td>
+            <td>EC2 instance-এ <code>AmazonEC2RoleforAWSCodeDeploy</code> managed policy সহ role attach করুন।</td>
+          </tr>
+          <tr>
+            <td>CodeDeploy agent not running</td>
+            <td>Agent install হয়নি বা service stop</td>
+            <td><code>sudo service codedeploy-agent start</code> এবং <code>sudo service codedeploy-agent status</code> দিয়ে verify করুন।</td>
+          </tr>
+          <tr>
+            <td>EC2 instance not found in deployment group</td>
+            <td>Tag mismatch বা EC2 instance different region-এ</td>
+            <td>EC2 instance-এ tag check করুন — deployment group-এর tag-এর সাথে match করতে হবে।</td>
+          </tr>
+          <tr>
+            <td>Blue/Green: duplicate files error</td>
+            <td>Deployment folder-এ previous deployment-এর files আছে</td>
+            <td>AMI তৈরির আগে <code>sudo rm -f /var/www/my-app/*</code> দিয়ে folder clean করুন।</td>
+          </tr>
+          <tr>
+            <td>ValidateService: ScriptFailed</td>
+            <td>Validation script fail করেছে</td>
+            <td>Script-এ error message দেখুন। <code>/opt/codedeploy-agent/deployment-root/deployment-logs/</code> log check করুন।</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Amazon ECS Rolling Deployments</h3>
+    <div class="trouble-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Symptom</th>
+            <th>সম্ভাব্য কারণ</th>
+            <th>সমাধান</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Task keeps starting and stopping (infinite loop)</td>
+            <td>Docker image-এ Nginx নেই বা HTTP serve করতে পারছে না — health check fail</td>
+            <td>Circuit breaker enable করুন। Dockerfile fix করে নতুন push করুন।</td>
+          </tr>
+          <tr>
+            <td>ECS task stuck in PROVISIONING state</td>
+            <td>ASG capacity provider-এ max capacity reached বা memory insufficient</td>
+            <td>ASG max capacity বাড়ান। Container instance-এর available memory চেক করুন।</td>
+          </tr>
+          <tr>
+            <td>imagedefinitions.json: file not found</td>
+            <td>buildspec-এ generate করা হয়নি বা artifact-এ include হয়নি</td>
+            <td>post_build-এ printf command ও artifacts section-এ file include আছে কিনা check করুন।</td>
+          </tr>
+          <tr>
+            <td>Website unreachable via ALB</td>
+            <td>ALB-এ HTTP port allow security group নেই</td>
+            <td>ALB-এ HTTP (80) allow করা security group attach করুন।</td>
+          </tr>
+          <tr>
+            <td>Blank page during rolling deployment</td>
+            <td>Multiple versions serving — Angular-এ file hash mismatch</td>
+            <td>Normal for rolling deployments. Deployment শেষে resolve হবে। Blue/Green ব্যবহার করুন।</td>
+          </tr>
+          <tr>
+            <td>ECS deploy action failed: service not found</td>
+            <td>ECS service মুছে গেছে বা service name পরিবর্তন হয়েছে</td>
+            <td>Pipeline-এ deploy action-এ service name update করুন।</td>
+          </tr>
+          <tr>
+            <td>ECR image pull failure in ECS task</td>
+            <td>ECS task-এ ECR pull permission নেই বা image URI ভুল</td>
+            <td>Task definition-এ execution role-এ <code>AmazonEC2ContainerRegistryReadOnly</code> policy দিন।</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>AWS CloudFormation (CodePipeline action)</h3>
+    <div class="trouble-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Symptom</th>
+            <th>সম্ভাব্য কারণ</th>
+            <th>সমাধান</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>InsufficientCapabilitiesException</td>
+            <td>Template-এ IAM resource আছে কিন্তু CAPABILITY_IAM নির্বাচন করা হয়নি</td>
+            <td>CloudFormation deploy action-এ Capabilities-এ <strong>CAPABILITY_IAM</strong> add করুন।</td>
+          </tr>
+          <tr>
+            <td>Stack creation failed: Resource creation failed</td>
+            <td>CloudFormation service role-এ permissions নেই</td>
+            <td>Role-এ template-এর সব resource type-এর permissions দিন।</td>
+          </tr>
+          <tr>
+            <td>Template file not found in artifact</td>
+            <td>Template file SourceArtifact-এ নেই বা path ভুল</td>
+            <td>Git-এ cloudformation/ folder আছে কিনা check করুন। File path exactly match করতে হবে।</td>
+          </tr>
+          <tr>
+            <td>Parameter value missing</td>
+            <td>Required parameter-এ value দেওয়া হয়নি</td>
+            <td>Advanced → Parameter overrides-এ JSON format-এ সব required parameter দিন।</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Back to top -->
+  <nav class="chapter-nav">
+    <a href="chapters/06-building-docker-images-ecs-rolling-deployments.html" class="chapter-nav-prev">← পূর্ববর্তী: Chapter 6</a>
+    <a href="index.html" class="chapter-nav-next">🏠 হোমে যান</a>
+  </nav>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

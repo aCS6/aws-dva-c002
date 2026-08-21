@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chapter 4 — AWS CodeDeploy (EC2) | CodePipeline Handbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+
+<!-- Sidebar Nav -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="../../index.html" class="sidebar-logo" title="← Back to DVA App"><img src="../../media/code-pipeline.svg" alt="" style="width:26px;height:26px;vertical-align:middle;margin-right:8px;filter:brightness(0) invert(1);"><span>CodePipeline<br><small style="font-weight:400;font-size:0.75rem;opacity:0.7;">Handbook</small></span></a><a href="../../index.html" style="display:block;margin-top:8px;font-size:0.74rem;color:#8899aa;text-decoration:none;padding:3px 0;">← DVA-C02 App</a>
+  </div>
+  <ul class="sidebar-nav">
+    <li><a href="../index.html">🏠 হোম</a></li>
+    <li class="nav-section">চ্যাপ্টারসমূহ</li>
+    <li><a href="01-introduction-aws-codepipeline-basics.html">১. CodePipeline Basics</a></li>
+    <li><a href="02-using-git-repositories-as-source-locations.html">২. Git Repositories as Source</a></li>
+    <li><a href="03-building-your-code-with-aws-codebuild.html">৩. AWS CodeBuild</a></li>
+    <li><a href="04-deploying-to-ec2-instances-with-aws-codedeploy.html" class="active">৪. AWS CodeDeploy (EC2)</a></li>
+    <li><a href="05-cloudformation-deploy-actions-manual-approvals-and-notifications.html">৫. CloudFormation, Approvals &amp; Notifications</a></li>
+    <li><a href="06-building-docker-images-ecs-rolling-deployments.html">৬. Docker &amp; ECS Deployments</a></li>
+    <li class="nav-section">রেফারেন্স</li>
+    <li><a href="../appendix.html">📎 Appendix</a></li>
+  </ul>
+</nav>
+
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+
+<main class="main-content">
+  <header class="chapter-header">
+    <div class="chapter-number">Chapter 4</div>
+    <h1>AWS CodeDeploy দিয়ে EC2-তে Deploy করা</h1>
+    <p class="chapter-subtitle">CodeDeploy agent setup, IAM roles, appspec.yml, deployment lifecycle events, CloudWatch Logs, ASG সহ In-Place ও Blue/Green deployment-এর সম্পূর্ণ হাতে-কলমে গাইড।</p>
+  </header>
+
+  <!-- In-page TOC -->
+  <nav class="toc-box" aria-label="এই পেজে যা আছে">
+    <h2 class="toc-title">এই পেজে যা আছে</h2>
+    <ol class="toc-list">
+      <li><a href="#what-you-will-learn">এই চ্যাপ্টারে যা শিখবেন</a></li>
+      <li><a href="#what-is-codedeploy">AWS CodeDeploy কী?</a></li>
+      <li><a href="#codedeploy-concepts">CodeDeploy Concepts</a></li>
+      <li><a href="#iam-role-ec2">EC2 Instance-এর জন্য IAM Role</a></li>
+      <li><a href="#ec2-setup">EC2 Instance Configure করা</a></li>
+      <li><a href="#deployment-group-tags">Tagged EC2-এর জন্য Deployment Group</a></li>
+      <li><a href="#codedeploy-pipeline-action">Pipeline-এ CodeDeploy Deploy Action</a></li>
+      <li><a href="#appspec-file">appspec.yml তৈরি করা</a></li>
+      <li><a href="#deployment-lifecycle">Deployment Lifecycle Events</a></li>
+      <li><a href="#deployment-logs">Deployment Logs দেখা</a></li>
+      <li><a href="#cloudwatch-logs">CloudWatch Logs-এ Log Streaming</a></li>
+      <li><a href="#asg-alb-deployment-group">ASG ও ALB সহ Deployment Group</a></li>
+      <li><a href="#inplace-allatonce">In-Place All-At-Once Deployment</a></li>
+      <li><a href="#asg-scales-out">ASG Scale Out হলে কী হয়</a></li>
+      <li><a href="#inplace-rolling">In-Place Rolling Deployment</a></li>
+      <li><a href="#automated-rollbacks">Automated Rollback</a></li>
+      <li><a href="#blue-green">Blue/Green Deployment</a></li>
+      <li><a href="#bluegreen-failure">Blue/Green Deployment Failure</a></li>
+      <li><a href="#key-terms">গুরুত্বপূর্ণ শব্দ</a></li>
+      <li><a href="#summary">সারাংশ</a></li>
+      <li><a href="#self-check">নিজেকে যাচাই করুন</a></li>
+    </ol>
+  </nav>
+
+  <!-- What you'll learn -->
+  <section id="what-you-will-learn">
+    <h2>এই চ্যাপ্টারে যা শিখবেন</h2>
+    <ul>
+      <li>AWS CodeDeploy-এর মূল concepts: Application, Deployment Group, Revision, Deployment, Appspec।</li>
+      <li>EC2 instance-এ CodeDeploy agent ও Nginx install করা; IAM instance profile attach করা।</li>
+      <li>Tagged EC2 instance ও Auto Scaling Group-এর জন্য deployment group তৈরি করা।</li>
+      <li><code>appspec.yml</code> তৈরি করা: files section, permissions, hooks (ApplicationStop, BeforeInstall, AfterInstall, ApplicationStart, ValidateService)।</li>
+      <li>Build artifact-এর সাথে appspec ও deploy scripts align করা।</li>
+      <li>EC2-তে deployment log দেখা এবং CloudWatch Logs-এ stream করা।</li>
+      <li>In-Place All-At-Once deployment: fast কিন্তু downtime হয়।</li>
+      <li>In-Place Rolling deployment: minimum downtime কিন্তু multiple versions serve হয়।</li>
+      <li>Automated rollback কীভাবে কাজ করে in-place deployment-এ।</li>
+      <li>Blue/Green deployment: production একদম প্রভাবিত হয় না — failure-তেও।</li>
+      <li>ASG scale out হলে CodeDeploy automatically নতুন instance-এ latest revision deploy করে।</li>
+    </ul>
+  </section>
+
+  <!-- Section 1: What is CodeDeploy -->
+  <section id="what-is-codedeploy">
+    <h2>AWS CodeDeploy কী?</h2>
+    <p>AWS CodeDeploy হলো AWS-এর <strong>automated application deployment service</strong>। এটি AWS Developer Tools family-র সদস্য — managed ও scalable।</p>
+
+    <h3>কোথায় Deploy করা যায়</h3>
+    <ul>
+      <li><strong>Amazon EC2 instances:</strong> Single instance বা ASG + ALB-এর পেছনে multiple instances।</li>
+      <li><strong>On-premises instances:</strong> AWS-এর বাইরের নিজস্ব সার্ভার।</li>
+      <li><strong>AWS Lambda functions:</strong> Serverless deployment।</li>
+      <li><strong>Amazon ECS:</strong> Container deployment।</li>
+    </ul>
+
+    <h3>সুবিধা</h3>
+    <ul>
+      <li><strong>Automation:</strong> Manual deployment process (SSH → command run) বাদ দেয়, human error কমায়।</li>
+      <li><strong>Minimum downtime:</strong> Rolling deployment-এ একবারে কয়েকটি instance নিয়ে deploy করা যায়।</li>
+      <li><strong>Blue/Green deployment:</strong> নতুন instance-এ deploy করে traffic switch করা — production প্রায় unaffected থাকে।</li>
+      <li><strong>Automated rollback:</strong> Failure হলে automatically পূর্ববর্তী successful revision deploy করে।</li>
+      <li><strong>Traffic shifting (Lambda/ECS):</strong> Canary, linear বা all-at-once traffic shift।</li>
+    </ul>
+
+    <h3>EC2 Instance-এর সাথে CodeDeploy কীভাবে কাজ করে</h3>
+    <p>CodeDeploy EC2 instance-কে directly access করে না। পরিবর্তে:</p>
+    <ol>
+      <li>EC2 instance-এ <strong>CodeDeploy agent</strong> installed ও running থাকে।</li>
+      <li>Agent প্রতি সেকেন্ডে CodeDeploy service poll করে নতুন deployment আছে কিনা।</li>
+      <li>নতুন deployment থাকলে agent CodeDeploy-এর দেওয়া S3 URL থেকে revision download করে।</li>
+      <li>Agent appspec.yml অনুযায়ী deployment execute করে।</li>
+    </ol>
+    <p>এই কারণে EC2 instance-এ অবশ্যই S3-তে access-এর IAM permission থাকতে হবে।</p>
+  </section>
+
+  <!-- Section 2: Concepts -->
+  <section id="codedeploy-concepts">
+    <h2>CodeDeploy Concepts</h2>
+    <dl>
+      <dt><strong>Application</strong></dt>
+      <dd>CodeDeploy-এর top-level component। একটি application নির্দিষ্ট compute platform-এর জন্য — EC2/On-premises, Lambda, বা ECS। একই application দিয়ে একাধিক platform-এ deploy করা যায় না।</dd>
+
+      <dt><strong>Compute Platform</strong></dt>
+      <dd>EC2/On-premises, Lambda, বা ECS। Application type নির্ধারণ করে।</dd>
+
+      <dt><strong>Deployment Group</strong></dt>
+      <dd>কোথায় deploy হবে তা define করে। Tagged EC2 instances বা ASG হতে পারে।</dd>
+
+      <dt><strong>Deployment Configuration</strong></dt>
+      <dd>Deployment-এর success/failure rule। যেমন: AllAtOnce, HalfAtATime, OneAtATime। Custom configuration-ও তৈরি করা যায়।</dd>
+
+      <dt><strong>Revision</strong></dt>
+      <dd>কী deploy হবে তা — deployable source code, appspec file এবং deployment scripts সহ।</dd>
+
+      <dt><strong>Deployment</strong></dt>
+      <dd>একটি revision-কে একটি deployment group-এ execute করা। Build-এর মতো CodeBuild-এ।</dd>
+
+      <dt><strong>Appspec file</strong></dt>
+      <dd>CodeDeploy-এর deployment specification file (YAML বা JSON)। EC2-তে: <code>appspec.yml</code>। ECS/Lambda-তে: <code>appspec.yaml</code>। Source code-এর root-এ থাকতে হবে, path customizable নয়।</dd>
+    </dl>
+
+    <div class="callout callout-info">
+      <strong>Appspec file naming:</strong> EC2-তে <code>appspec.yml</code> (yml extension)। Lambda/ECS-তে <code>appspec.yaml</code> (yaml extension)। দুটো ভিন্ন!
+    </div>
+  </section>
+
+  <!-- Section 3: IAM Role -->
+  <section id="iam-role-ec2">
+    <h2>EC2 Instance-এর জন্য IAM Role</h2>
+
+    <h3>EC2 Instance IAM Role (WebServerRole)</h3>
+    <p>EC2 instance-কে CodeDeploy artifact store (S3) থেকে revision download করার permission দরকার।</p>
+    <ol>
+      <li>IAM Console → Roles → <strong>Create role</strong>।</li>
+      <li>Use case: <strong>EC2</strong>।</li>
+      <li>Policy: <strong>AmazonEC2RoleforAWSCodeDeploy</strong> managed policy।
+        <p>এই policy EC2 instance-কে সব S3 bucket-এ GetObject ও ListBucket permission দেয়। Production-এ শুধু artifact store bucket-এ সীমাবদ্ধ করা উচিত।</p>
+      </li>
+      <li>Role name: <code>WebServerRole</code></li>
+    </ol>
+
+    <h3>CodeDeploy Service Role (CodeDeployEC2ServiceRole)</h3>
+    <p>CodeDeploy service role EC2 tag দেখতে, ASG manage করতে এবং ALB-এ register/deregister করতে ব্যবহার হয়। Deployment group তৈরিতে এই role দিতে হয়।</p>
+    <ol>
+      <li>IAM Console → Roles → <strong>Create role</strong>।</li>
+      <li>Use case: <strong>CodeDeploy → CodeDeploy</strong> (EC2/On-premises use case)।</li>
+      <li>Policy: <strong>AWSCodeDeployRole</strong> — EC2 tags expand, ASG ও ELB access।</li>
+      <li>Role name: <code>CodeDeployEC2ServiceRole</code></li>
+      <li>Blue/Green deployment-এর জন্য additional inline policy যোগ করুন:</li>
+    </ol>
+    <pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:RunInstances",
+        "ec2:CreateTags",
+        "iam:PassRole"
+      ],
+      "Resource": "*"
+    }
+  ]
+}</code></pre>
+  </section>
+
+  <!-- Section 4: EC2 Setup -->
+  <section id="ec2-setup">
+    <h2>EC2 Instance Configure করা</h2>
+
+    <h3>EC2 Launch Configuration</h3>
+    <ul>
+      <li>AMI: <strong>Amazon Linux 2</strong> (Amazon Linux 2023 নয়)।</li>
+      <li>Instance type: t2.micro (free tier)।</li>
+      <li>IAM instance profile: <code>WebServerRole</code>।</li>
+      <li>Security group: SSH (port 22) + HTTP (port 80) open।</li>
+      <li>Tag: <code>Application = MyAngularProject</code> (CodeDeploy deployment group-এর জন্য)।</li>
+    </ul>
+
+    <h3>EC2 Instance Connect করে Setup</h3>
+    <pre><code># ১. Package update
+sudo yum update -y
+
+# ২. Dependencies install
+sudo yum install -y ruby wget
+
+# ৩. CodeDeploy agent download (Ireland region)
+wget https://aws-codedeploy-eu-west-1.s3.eu-west-1.amazonaws.com/latest/install
+
+# ৪. Executable করুন
+chmod +x ./install
+
+# ৫. Agent install করুন
+sudo ./install auto
+
+# ৬. Status check
+sudo service codedeploy-agent status</code></pre>
+
+    <div class="callout callout-info">
+      CodeDeploy agent download URL-এ region code থাকে। আপনার region অনুযায়ী পরিবর্তন করুন। যেমন us-east-1 হলে: <code>aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com</code>
+    </div>
+
+    <h3>Nginx Web Server Install ও Configure</h3>
+    <pre><code># Nginx install (Amazon Linux 2-এ Amazon Extras ব্যবহার করুন)
+sudo amazon-linux-extras install -y nginx1
+
+# Nginx start করুন
+sudo service nginx start
+
+# Boot-এ auto-start enable করুন
+sudo chkconfig nginx on
+
+# Status check
+sudo service nginx status</code></pre>
+
+    <p>Nginx configuration file edit করে Angular project folder serve করুন:</p>
+    <pre><code># Nginx config file edit
+sudo nano /etc/nginx/nginx.conf
+
+# server block-এ root directive পরিবর্তন করুন:
+root /var/www/my-angular-project;
+
+# Nginx restart
+sudo service nginx restart</code></pre>
+
+    <pre><code># Application folder তৈরি করুন
+sudo mkdir -p /var/www/my-angular-project</code></pre>
+
+    <div class="callout callout-warning">
+      CodeDeploy agent-এর deployment folder empty থাকতে হবে। আগে অন্য deployment group থেকে deploy করা files থাকলে error হবে।
+    </div>
+  </section>
+
+  <!-- Section 5: Deployment Group Tags -->
+  <section id="deployment-group-tags">
+    <h2>Tagged EC2-এর জন্য Deployment Group</h2>
+
+    <h3>CodeDeploy Application তৈরি</h3>
+    <ol>
+      <li>CodeDeploy Console → <strong>Applications → Create application</strong>।</li>
+      <li>Application name: <code>MyAngularApp</code></li>
+      <li>Compute platform: <strong>EC2/On-premises</strong>।</li>
+    </ol>
+
+    <h3>Deployment Group তৈরি</h3>
+    <ol>
+      <li>Application-এ → <strong>Create deployment group</strong>।</li>
+      <li>Group name: <code>TaggedEC2Instances</code></li>
+      <li>Service role: <code>CodeDeployEC2ServiceRole</code></li>
+      <li>Deployment type: <strong>In-place</strong>।</li>
+      <li>Environment configuration: <strong>Amazon EC2 instances</strong>।</li>
+      <li>Tag group: Key=<code>Application</code>, Value=<code>MyAngularProject</code>
+        <div class="callout callout-info">
+          <strong>Tag group-এর logic:</strong>
+          <ul>
+            <li>একই tag group-এর মধ্যে একাধিক tag = <strong>OR</strong> operator।</li>
+            <li>ভিন্ন tag group = <strong>AND</strong> operator — instance-কে সব group-এর অন্তত একটি tag match করতে হবে।</li>
+          </ul>
+        </div>
+      </li>
+      <li>Deployment configuration: <strong>CodeDeployDefault.AllAtOnce</strong>।</li>
+      <li>Load balancer: Disable (এখন ALB নেই)।</li>
+    </ol>
+  </section>
+
+  <!-- Section 6: Pipeline Deploy Action -->
+  <section id="codedeploy-pipeline-action">
+    <h2>Pipeline-এ CodeDeploy Deploy Action</h2>
+    <ol>
+      <li>Pipeline → <strong>Edit</strong> → Deploy stage-এর <strong>Edit stage</strong>।</li>
+      <li>পুরনো S3 deploy action remove করুন।</li>
+      <li><strong>Add action group</strong> → Action name: <code>DeployToEC2</code>।</li>
+      <li>Action provider: <strong>AWS CodeDeploy</strong>।</li>
+      <li>Input artifact: <strong>BuildArtifact</strong> (SourceArtifact নয়!)।</li>
+      <li>Application name: <code>MyAngularApp</code>।</li>
+      <li>Deployment group: আপনার group।</li>
+      <li><strong>Done → Done → Save</strong>।</li>
+    </ol>
+    <div class="callout callout-warning">
+      Input artifact অবশ্যই <strong>BuildArtifact</strong> হতে হবে। SourceArtifact-এ appspec.yml নেই।
+    </div>
+  </section>
+
+  <!-- Section 7: Appspec File -->
+  <section id="appspec-file">
+    <h2>appspec.yml তৈরি করা</h2>
+    <p><code>appspec.yml</code> CodeDeploy-কে বলে deployment-এ কী করতে হবে। এটি source code-এর root-এ থাকতে হবে — এবং build artifact-এও include করতে হবে।</p>
+
+    <h3>সম্পূর্ণ appspec.yml উদাহরণ</h3>
+    <pre><code>version: 0.0
+os: linux
+
+files:
+  - source: dist/my-angular-project
+    destination: /var/www/my-angular-project
+
+permissions:
+  - object: /var/www/my-angular-project
+    pattern: "**"
+    mode: "0755"
+    owner: root
+    group: root
+    type:
+      - file
+      - directory
+
+hooks:
+  ApplicationStart:
+    - location: deploy-scripts/application-start-hook.sh
+      timeout: 300
+  # ValidateService:
+  #   - location: deploy-scripts/validate-service.sh
+  #     timeout: 300</code></pre>
+
+    <h3>deploy-scripts/application-start-hook.sh</h3>
+    <pre><code>#!/bin/bash
+
+sudo service nginx restart</code></pre>
+
+    <h3>Sections-এর ব্যাখ্যা</h3>
+    <dl>
+      <dt><strong>version</strong></dt>
+      <dd>Appspec syntax version — সবসময় <code>0.0</code>।</dd>
+
+      <dt><strong>os</strong></dt>
+      <dd>Target OS: <code>linux</code> বা <code>windows</code> (lowercase)।</dd>
+
+      <dt><strong>files</strong></dt>
+      <dd>Revision থেকে কোন files/folders কোথায় copy করবে। <code>source: /</code> মানে সব files। Source path revision-এ relative; destination EC2-তে absolute।</dd>
+
+      <dt><strong>permissions</strong></dt>
+      <dd>Deployed files/directories-এর Linux permissions সেট করা। Optional।</dd>
+
+      <dt><strong>hooks</strong></dt>
+      <dd>Deployment lifecycle events-এ shell scripts execute করার সুবিধা।</dd>
+    </dl>
+
+    <h3>Build Artifact-এর সাথে Align করা</h3>
+    <p>Buildspec-এ <code>artifacts</code> section-এ appspec ও deploy-scripts-ও include করতে হবে:</p>
+    <pre><code>artifacts:
+  files:
+    - dist/my-angular-project/**/*
+    - appspec.yml
+    - deploy-scripts/**/*</code></pre>
+    <div class="callout callout-warning">
+      <code>base-directory</code> remove করতে হবে যখন appspec ও scripts include করতে হয়। তাহলে appspec-এর files section-এ <code>source: dist/my-angular-project</code> specify করতে হবে।
+    </div>
+  </section>
+
+  <!-- Section 8: Lifecycle Events -->
+  <section id="deployment-lifecycle">
+    <h2>Deployment Lifecycle Events</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    START([Deployment শুরু]) --> STOP["ApplicationStop\n(আগের revision-এর hook)\napp বন্ধ করুন"]
+    STOP --> DL["DownloadBundle\n(reserved - CodeDeploy)\nrevision S3 থেকে download"]
+    DL --> BI["BeforeInstall\n(hook available)\nbackup নিন"]
+    BI --> INST["Install\n(reserved - CodeDeploy)\nfiles copy, permissions set"]
+    INST --> AI["AfterInstall\n(hook available)\npost-install config"]
+    AI --> AS["ApplicationStart\n(hook available)\napp/server start"]
+    AS --> VS["ValidateService\n(hook available)\ndeployment validate"]
+    VS --> END([Deployment শেষ])
+
+    subgraph LB ["Load Balancer-এর জন্য additional events"]
+      BT["BeforeBlockTraffic\nAfterBlockTraffic"]
+      BAT["BeforeAllowTraffic\nAfterAllowTraffic"]
+    end
+      </div>
+      <p class="diagram-caption">EC2 deployment lifecycle events। Reserved events = CodeDeploy নিজে handle করে, hook define করা যায় না।</p>
+    </div>
+
+    <h3>Events-এর বিস্তারিত</h3>
+    <div class="comparison-table">
+      <table>
+        <thead><tr><th>Event</th><th>Hook Available?</th><th>Best Practice Use</th></tr></thead>
+        <tbody>
+          <tr><td>ApplicationStop</td><td>✅ (পূর্ববর্তী revision-এর hook)</td><td>App gracefully shutdown। ২য় deployment থেকে available।</td></tr>
+          <tr><td>DownloadBundle</td><td>❌ Reserved</td><td>CodeDeploy revision download করে।</td></tr>
+          <tr><td>BeforeInstall</td><td>✅</td><td>Existing app backup।</td></tr>
+          <tr><td>Install</td><td>❌ Reserved</td><td>Files copy ও permissions set করে।</td></tr>
+          <tr><td>AfterInstall</td><td>✅</td><td>Post-install configuration, file decryption।</td></tr>
+          <tr><td>ApplicationStart</td><td>✅</td><td>App বা web server restart।</td></tr>
+          <tr><td>ValidateService</td><td>✅</td><td>Automated test চালানো, deployment validate।</td></tr>
+          <tr><td>BeforeBlockTraffic</td><td>✅ (ALB মাত্র)</td><td>Load balancer deregistration-এর আগে।</td></tr>
+          <tr><td>AfterBlockTraffic</td><td>✅ (ALB মাত্র)</td><td>Deregistration-এর পরে।</td></tr>
+          <tr><td>BeforeAllowTraffic</td><td>✅ (ALB মাত্র)</td><td>Registration-এর আগে।</td></tr>
+          <tr><td>AfterAllowTraffic</td><td>✅ (ALB মাত্র)</td><td>Registration-এর পরে।</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Section 9: Deployment Logs -->
+  <section id="deployment-logs">
+    <h2>Deployment Logs দেখা</h2>
+    <p>CodeDeploy agent EC2 instance-এ log files লেখে:</p>
+    <pre><code># সব deployment-এর main log file
+/opt/codedeploy-agent/deployment-root/deployment-logs/codedeploy-agent-deployments.log
+
+# নির্দিষ্ট deployment-এর logs
+/opt/codedeploy-agent/deployment-root/&lt;deployment-group-id&gt;/&lt;deployment-id&gt;/logs/scripts.log
+
+# নির্দিষ্ট deployment-এর revision contents
+/opt/codedeploy-agent/deployment-root/&lt;deployment-group-id&gt;/&lt;deployment-id&gt;/deployment-archive/</code></pre>
+
+    <p>CodeDeploy Console-এ deployment failure হলে:</p>
+    <ol>
+      <li>Deployment → <strong>Deployment lifecycle events</strong> → failed instance-এর <strong>View events</strong>।</li>
+      <li>Failed event-এর error code link ক্লিক করুন।</li>
+    </ol>
+    <p>অনেক instance থাকলে প্রতিটিতে connect করা কষ্টকর। CloudWatch Logs ব্যবহার করা ভালো।</p>
+  </section>
+
+  <!-- Section 10: CloudWatch Logs -->
+  <section id="cloudwatch-logs">
+    <h2>CloudWatch Logs-এ Log Streaming</h2>
+
+    <h3>Prerequisites</h3>
+    <ol>
+      <li>EC2 instance-এর IAM role-এ <strong>CloudWatchAgentServerPolicy</strong> attach করুন।</li>
+      <li>EC2-তে CloudWatch agent install করুন।</li>
+    </ol>
+
+    <h3>CloudWatch Agent Install</h3>
+    <pre><code># Download
+wget https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+
+# Install
+sudo rpm -U ./amazon-cloudwatch-agent.rpm
+
+# Configuration wizard চালান
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-config-wizard</code></pre>
+
+    <p>Wizard-এ log file path দিন:</p>
+    <pre><code>/opt/codedeploy-agent/deployment-root/deployment-logs/codedeploy-agent-deployments.log</code></pre>
+    <p>Log group: <code>codedeploy-agent-deployments.log</code> (default)।</p>
+    <p>Log stream: <code>{instance_id}</code> (instance ID দিয়ে stream name তৈরি হবে)।</p>
+
+    <pre><code># Agent start করুন
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
+
+# Status check
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -m ec2 -a status</code></pre>
+
+    <div class="callout callout-info">
+      ASG ব্যবহার করলে instance terminate হলে log হারিয়ে যায়। CloudWatch Logs-এ stream করলে সব instance-এর log centrally সংরক্ষিত থাকে। Log group-এ প্রতিটি instance-এর আলাদা log stream থাকে।
+    </div>
+  </section>
+
+  <!-- Section 11: ASG + ALB Deployment Group -->
+  <section id="asg-alb-deployment-group">
+    <h2>ASG ও ALB সহ Deployment Group</h2>
+
+    <h3>Architecture</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    LB["Application Load Balancer\nDNS: my-alb.eu-west-1.elb.amazonaws.com"]
+    TG["Target Group\nmy-alb-target-group"]
+    ASG["EC2 Auto Scaling Group\nmy-auto-scaling-group\n(2+ instances)"]
+    CP["CodePipeline\nDeploy Stage"]
+    CD["CodeDeploy\nDeployment Group:\nMyAutoScalingGroup"]
+
+    LB --> TG --> ASG
+    CP --> CD --> ASG
+      </div>
+      <p class="diagram-caption">ASG ও ALB সহ CodeDeploy architecture।</p>
+    </div>
+
+    <h3>Setup Steps</h3>
+    <ol>
+      <li>বিদ্যমান EC2 instance থেকে <strong>AMI</strong> তৈরি করুন।</li>
+      <li>AMI থেকে <strong>Launch Template</strong> তৈরি করুন (IAM profile, security group সহ)।</li>
+      <li><strong>Application Load Balancer</strong> তৈরি করুন (Internet-facing, HTTP 80)।</li>
+      <li>ALB-এর জন্য আলাদা security group তৈরি করুন।</li>
+      <li><strong>Target Group</strong> তৈরি করুন (type: Instances, HTTP 80, default VPC)।
+        <div class="callout callout-warning">
+          Target group-এর <strong>Deregistration delay</strong> 300s (5 min) থেকে কমিয়ে <strong>60s</strong> রাখুন। না হলে CodeDeploy deployment অনেক বেশি সময় নেবে।
+        </div>
+      </li>
+      <li><strong>Auto Scaling Group</strong> তৈরি করুন: Launch template ব্যবহার করে, সব AZ, ALB target group attach করুন, desired/min/max = 2।
+        <p>Health check grace period বাড়িয়ে নিন যদি application deploy হতে সময় লাগে।</p>
+      </li>
+      <li>CodeDeploy Application-এ নতুন deployment group: <code>MyAutoScalingGroup</code>।
+        <ul>
+          <li>Environment configuration: <strong>Amazon EC2 Auto Scaling groups</strong>।</li>
+          <li>Load balancer: <strong>Enable</strong>, target group নির্বাচন করুন।</li>
+        </ul>
+      </li>
+    </ol>
+  </section>
+
+  <!-- Section 12: In-Place All-At-Once -->
+  <section id="inplace-allatonce">
+    <h2>In-Place All-At-Once Deployment</h2>
+    <p>Default deployment configuration: <code>CodeDeployDefault.AllAtOnce</code> — সব instance-এ একসাথে deploy করে।</p>
+
+    <h3>Lifecycle (ALB সহ)</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant ALB
+    participant CodeDeploy
+    participant Instances as All Instances
+
+    CodeDeploy->>ALB: Deregister all instances (BlockTraffic)
+    Note over ALB,Instances: Website DOWN! কেউ traffic পাচ্ছে না
+    ALB-->>CodeDeploy: Deregistration complete
+    CodeDeploy->>Instances: Deploy new revision
+    Instances-->>CodeDeploy: Deployment complete
+    CodeDeploy->>ALB: Register all instances (AllowTraffic)
+    Note over ALB,Instances: Website UP - new version
+      </div>
+      <p class="diagram-caption">In-Place All-At-Once: সব instance একসাথে offline → deploy → online।</p>
+    </div>
+
+    <h3>সুবিধা ও অসুবিধা</h3>
+    <ul>
+      <li>✅ Fast — সব instance parallel-এ deploy হয়।</li>
+      <li>❌ <strong>Downtime</strong> — সব instance একসাথে offline থাকে deployment-এর সময়।</li>
+      <li>❌ Failure হলে সব instance একসাথে broken version পায়।</li>
+      <li>✅ Use case: emergency hotfix deployment যেখানে speed priority।</li>
+    </ul>
+  </section>
+
+  <!-- Section 13: ASG Scale Out -->
+  <section id="asg-scales-out">
+    <h2>ASG Scale Out হলে কী হয়</h2>
+    <p>CodeDeploy deployment group-এর সাথে ASG associate করলে একটি <strong>lifecycle hook</strong> automatically তৈরি হয়।</p>
+    <p>এই hook-এর কারণে:</p>
+    <ul>
+      <li>ASG নতুন instance launch করলে সেই instance <strong>Pending:Wait</strong> state-এ থাকে।</li>
+      <li>CodeDeploy automatically একটি নতুন deployment trigger করে।</li>
+      <li>Deployment group-এর <strong>last known successful revision</strong> নতুন instance-এ deploy করা হয়।</li>
+      <li>Deployment সফল হলে instance <strong>InService</strong> state-এ যায় এবং target group-এ register হয়।</li>
+    </ul>
+
+    <div class="callout callout-warning">
+      একটি ASG-এ একবারে শুধুমাত্র <strong>একটি CodeDeploy deployment group</strong> associate করুন। একাধিক deployment group conflict করে এবং instance repeatedly terminate ও relaunch হতে পারে।
+    </div>
+  </section>
+
+  <!-- Section 14: In-Place Rolling -->
+  <section id="inplace-rolling">
+    <h2>In-Place Rolling Deployment</h2>
+    <p>Configuration: <code>CodeDeployDefault.OneAtATime</code> বা <code>HalfAtATime</code>।</p>
+    <p>Deployment group edit করে deployment configuration পরিবর্তন করুন।</p>
+
+    <h3>OneAtATime Lifecycle (3 instances, ALB সহ)</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    A["Instance 1\nDeploy (offline)\nv5 → v6"]
+    B["Instance 2\nServing v5\n(waiting)"]
+    C["Instance 3\nServing v5\n(waiting)"]
+
+    A2["Instance 1\nServing v6\n(online)"]
+    B2["Instance 2\nDeploy (offline)\nv5 → v6"]
+    C2["Instance 3\nServing v5\n(waiting)"]
+
+    A3["Instance 1\nServing v6"]
+    B3["Instance 2\nServing v6"]
+    C3["Instance 3\nDeploy (offline)\nv5 → v6"]
+
+    A --- B --- C
+    A2 --- B2 --- C2
+    A3 --- B3 --- C3
+      </div>
+      <p class="diagram-caption">Rolling deployment: একটি instance-এ deploy, বাকিরা serve করতে থাকে।</p>
+    </div>
+
+    <h3>সুবিধা ও অসুবিধা</h3>
+    <ul>
+      <li>✅ Minimum downtime — পুরো fleet কখনো offline যায় না।</li>
+      <li>❌ Deployment-এর সময় <strong>দুটো version একসাথে serve</strong> হয়।</li>
+      <li>❌ Angular-এ ভিন্ন file names কারণে blank page দেখাতে পারে।</li>
+      <li>❌ All-at-once-এর তুলনায় বেশি সময় লাগে।</li>
+      <li>✅ Failure হলে remaining instances-এ deploy stop হয়, existing fleet serve করতে থাকে।</li>
+    </ul>
+  </section>
+
+  <!-- Section 15: Automated Rollbacks -->
+  <section id="automated-rollbacks">
+    <h2>Automated Rollback</h2>
+    <p>Deployment group edit → Advanced → <strong>Roll back when a deployment fails</strong> enable করুন।</p>
+
+    <h3>কীভাবে কাজ করে (In-Place Rolling)</h3>
+    <ul>
+      <li>Deployment failure হলে CodeDeploy automatically একটি <strong>rollback deployment</strong> তৈরি করে।</li>
+      <li>Rollback deployment শুধুমাত্র <strong>failed instance-এ</strong> last known successful revision deploy করে।</li>
+      <li>Deploy success করা instances-এ rollback হয় না।</li>
+      <li>Revision: সবচেয়ে শেষ successful deployment-এর revision।</li>
+    </ul>
+
+    <div class="callout callout-info">
+      Pipeline-এ deploy action fail করলে CodePipeline-এর execution fail হয়, automated rollback হলেও। CodeDeploy-এর rollback CodePipeline-এর failure state পরিবর্তন করে না।
+    </div>
+
+    <p>Rollback trigger করার script example (ValidateService hook-এ):</p>
+    <pre><code>#!/bin/bash
+
+echo "This script will fail!"
+exit 1</code></pre>
+  </section>
+
+  <!-- Section 16: Blue/Green Deployment -->
+  <section id="blue-green">
+    <h2>Blue/Green Deployment</h2>
+    <p>Blue/Green deployment-এ existing instances-এ deploy না করে সম্পূর্ণ নতুন instance fleet তৈরি করা হয়।</p>
+
+    <h3>Flow</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    S1["Step 1: Green Fleet Provision\nCodeDeploy Blue ASG duplicate করে\nনতুন ASG (green) তৈরি করে"]
+    S2["Step 2: Deploy to Green Fleet\nনতুন revision সব green instances-এ deploy"]
+    S3["Step 3: Traffic Switch\nGreen instances ALB-তে register\nBlue instances ALB থেকে deregister"]
+    S4["Step 4: Blue Fleet Terminate\nOriginal ASG ও instances terminate"]
+
+    S1 --> S2 --> S3 --> S4
+      </div>
+      <p class="diagram-caption">Blue/Green deployment-এর 4টি ধাপ।</p>
+    </div>
+
+    <h3>Configuration</h3>
+    <ul>
+      <li>Deployment group-এ <strong>Blue/green</strong> deployment type নির্বাচন করুন।</li>
+      <li>Replacement instance provisioning: <strong>Automatically copy Amazon EC2 Auto Scaling group</strong> (default)।</li>
+      <li>Traffic reroute: <strong>Reroute traffic immediately</strong> (default) বা নির্দিষ্ট wait time।</li>
+      <li>Termination: <strong>Terminate immediately</strong> (default) বা manually later।</li>
+      <li>Deployment configuration: Green fleet-এ <strong>AllAtOnce</strong> — তারা traffic serve করছে না, তাই rolling দরকার নেই।</li>
+    </ul>
+
+    <h3>সুবিধা ও অসুবিধা</h3>
+    <ul>
+      <li>✅ Production একদম unaffected — failure হলেও blue fleet serve করতে থাকে।</li>
+      <li>✅ Multiple version একসাথে serve হওয়ার সমস্যা নেই (traffic switch এক ধাপে)।</li>
+      <li>❌ Deployment-এর সময় <strong>instance count double</strong> হয় — cost বাড়ে।</li>
+      <li>❌ AWS account-এ পর্যাপ্ত EC2 capacity থাকতে হবে।</li>
+    </ul>
+  </section>
+
+  <!-- Section 17: Blue/Green Failure -->
+  <section id="bluegreen-failure">
+    <h2>Blue/Green Deployment Failure</h2>
+
+    <p>Green fleet-এ deployment fail করলে:</p>
+    <ul>
+      <li>Step 2 fail হয় — traffic switch (Step 3) হয় না।</li>
+      <li>Blue fleet অপরিবর্তিত থাকে — production unaffected।</li>
+      <li>CodeDeploy <strong>rollback deployment তৈরি করে না</strong> — কারণ rollback-এর দরকার নেই।</li>
+      <li>CodeDeploy failure-তে তৈরি green ASG automatic terminate করে না — manually delete করতে হবে।</li>
+    </ul>
+
+    <h3>Green ASG Identify ও Delete করা</h3>
+    <p>Failed deployment ID দিয়ে ASG filter করুন (tag: <code>CodeDeployProvisioningDeploymentId</code>)।</p>
+    <pre><code># Failed deployment ID দিয়ে filter করুন
+# EC2 → Auto Scaling Groups → Filter by tag</code></pre>
+
+    <div class="callout callout-warning">
+      Correct ASG identify না করে delete করলে production ASG-ও delete হতে পারে। সবসময় deployment ID দিয়ে confirm করুন।
+    </div>
+  </section>
+
+  <!-- Key Terms -->
+  <section id="key-terms">
+    <h2>গুরুত্বপূর্ণ শব্দ</h2>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <dt>CodeDeploy Agent</dt>
+        <dd>EC2 instance-এ install করা software যা CodeDeploy poll করে ও deployment execute করে।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>appspec.yml</dt>
+        <dd>CodeDeploy-এর deployment specification file। EC2-তে <code>appspec.yml</code>, ECS/Lambda-তে <code>appspec.yaml</code>।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Deployment Group</dt>
+        <dd>কোথায় deploy হবে — tagged EC2 বা ASG।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Revision</dt>
+        <dd>Deploy করার content — build artifact, appspec, scripts সহ।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>In-Place Deployment</dt>
+        <dd>Existing instance-এ deploy করা।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Blue/Green Deployment</dt>
+        <dd>নতুন instance fleet তৈরি করে deploy, তারপর traffic switch।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>AllAtOnce</dt>
+        <dd>সব instance-এ একসাথে deploy। Fast কিন্তু downtime।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>OneAtATime / HalfAtATime</dt>
+        <dd>Rolling deployment — একটি বা অর্ধেক instance at a time।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Automated Rollback</dt>
+        <dd>Failure-তে automatically last successful revision deploy।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Lifecycle Hook (ASG)</dt>
+        <dd>CodeDeploy ASG-এ attach করা hook যা scale out-এ automatic deployment trigger করে।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Deregistration Delay</dt>
+        <dd>ALB target group-এ in-flight requests drain করার সময় (default 300s)।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>ValidateService</dt>
+        <dd>Deployment lifecycle-এর শেষ hookable event — validation script চালানোর জায়গা।</dd>
+      </div>
+    </div>
+  </section>
+
+  <!-- Summary -->
+  <section id="summary">
+    <h2>সারাংশ</h2>
+    <ul>
+      <li>CodeDeploy EC2 instance-কে directly access করে না — agent poll করে deployment নেয়।</li>
+      <li>EC2 instance-এ <code>AmazonEC2RoleforAWSCodeDeploy</code> policy সহ IAM role দিতে হবে।</li>
+      <li><code>appspec.yml</code> source code root-এ থাকতহবে এবং build artifact-এ include করতে হবে।</li>
+      <li>Build artifact-এ appspec ও deploy scripts include করতে buildspec-এর artifacts section আপডেট করতে হবে।</li>
+      <li><strong>In-Place All-At-Once:</strong> Fast, downtime হয়। <strong>Rolling:</strong> Minimum downtime, multiple versions serve। <strong>Blue/Green:</strong> Production unaffected, cost বাড়ে।</li>
+      <li>ASG-এ CodeDeploy deployment group associate করলে scale out-এ automatic deployment।</li>
+      <li>Blue/Green failure-এ rollback দরকার নেই — blue fleet অপরিবর্তিত থাকে। Green ASG manually delete করতে হবে।</li>
+      <li>Target group deregistration delay কমিয়ে 60s রাখুন deployment speed-এর জন্য।</li>
+    </ul>
+  </section>
+
+  <!-- Self Check -->
+  <section id="self-check">
+    <h2>নিজেকে যাচাই করুন</h2>
+
+    <details>
+      <summary>১. EC2 instance-এ CodeDeploy agent install করার আগে কোন IAM permission setup করতে হবে এবং কেন?</summary>
+      <div class="answer">
+        <p>EC2 instance-এ <strong>AmazonEC2RoleforAWSCodeDeploy</strong> policy সহ IAM instance profile attach করতে হবে। কারণ CodeDeploy agent deployment-এর সময় revision (build artifact) CodeDeploy-এর দেওয়া S3 URL থেকে download করে। এই S3 access-এর জন্য permission দরকার।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>২. appspec.yml-এর files section-এ <code>source: /</code> দিলে কী হয়?</summary>
+      <div class="answer">
+        <p>Revision-এর সব files ও folders copy হবে destination-এ। শুধু নির্দিষ্ট folder copy করতে চাইলে সেই path দিতে হবে, যেমন <code>source: dist/my-angular-project</code>।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৩. In-Place Rolling deployment-এ Angular application-এ blank page কেন দেখা যায়?</summary>
+      <div class="answer">
+        <p>Angular প্রতিটি build-এ JavaScript ও CSS files-এর unique hash-based name generate করে। Rolling deployment-এর সময় পুরনো version ও নতুন version simultaneously serve হয়। Load balancer যদি <code>index.html</code> পুরনো instance থেকে এবং JavaScript files নতুন instance থেকে serve করে, filename mismatch-এর কারণে blank page দেখায়।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৪. Blue/Green deployment failure হলে CodeDeploy automated rollback তৈরি করে কিনা এবং কেন?</summary>
+      <div class="answer">
+        <p><strong>না।</strong> Blue/Green deployment failure-এ automated rollback দরকার নেই কারণ Blue fleet (original instances) সম্পূর্ণ অপরিবর্তিত থাকে এবং production traffic serve করতে থাকে। কোনো instance-এ broken revision deploy হয়নি। তবে Green ASG manually delete করতে হবে।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৫. ASG scale out হলে CodeDeploy কোন revision deploy করে?</summary>
+      <div class="answer">
+        <p>Deployment group-এর <strong>last known successful revision</strong> deploy করা হয় — অর্থাৎ সেই deployment group-এ সবচেয়ে শেষ সফল deployment-এর revision।</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- Chapter Navigation -->
+  <nav class="chapter-nav">
+    <a href="03-building-your-code-with-aws-codebuild.html" class="chapter-nav-prev">← পূর্ববর্তী: AWS CodeBuild</a>
+    <a href="05-cloudformation-deploy-actions-manual-approvals-and-notifications.html" class="chapter-nav-next">পরবর্তী: CloudFormation &amp; Approvals →</a>
+  </nav>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

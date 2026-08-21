@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AWS CodePipeline Step by Step — Bangla Handbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- Sidebar Nav -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="../index.html" class="sidebar-logo" title="← Back to DVA App">
+      <img src="../media/code-pipeline.svg" alt="CodePipeline" style="width:26px;height:26px;vertical-align:middle;margin-right:8px;filter:brightness(0) invert(1);">
+      <span>CodePipeline<br><small style="font-weight:400;font-size:0.75rem;opacity:0.7;">Handbook</small></span>
+    </a>
+    <a href="../index.html" style="display:block;margin-top:8px;font-size:0.74rem;color:#8899aa;text-decoration:none;padding:3px 0;">← DVA-C02 App</a>
+  </div>
+  <ul class="sidebar-nav">
+    <li><a href="index.html" class="active">🏠 হোম</a></li>
+    <li class="nav-section">চ্যাপ্টারসমূহ</li>
+    <li><a href="chapters/01-introduction-aws-codepipeline-basics.html">১. CodePipeline Basics</a></li>
+    <li><a href="chapters/02-using-git-repositories-as-source-locations.html">২. Git Repositories as Source</a></li>
+    <li><a href="chapters/03-building-your-code-with-aws-codebuild.html">৩. AWS CodeBuild</a></li>
+    <li><a href="chapters/04-deploying-to-ec2-instances-with-aws-codedeploy.html">৪. AWS CodeDeploy (EC2)</a></li>
+    <li><a href="chapters/05-cloudformation-deploy-actions-manual-approvals-and-notifications.html">৫. CloudFormation, Approvals &amp; Notifications</a></li>
+    <li><a href="chapters/06-building-docker-images-ecs-rolling-deployments.html">৬. Docker &amp; ECS Deployments</a></li>
+    <li class="nav-section">রেফারেন্স</li>
+    <li><a href="appendix.html">📎 Appendix</a></li>
+  </ul>
+</nav>
+
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+
+<main class="main-content">
+
+  <!-- Hero Header -->
+  <header class="home-header">
+    <div class="chapter-number" style="text-align:center; margin-bottom: 12px;">AWS CodePipeline Step by Step — Udemy Course</div>
+    <h1>AWS CodePipeline Handbook</h1>
+    <p>Udemy কোর্সের subtitle থেকে তৈরি করা বাংলা ভাষার সম্পূর্ণ হ্যান্ডবুক। CI/CD pipeline তৈরি থেকে Docker, ECS deployment পর্যন্ত সব ধাপে ধাপে।</p>
+  </header>
+
+  <!-- Intro -->
+  <section class="intro-section">
+    <h2 class="section-heading">এই হ্যান্ডবুক সম্পর্কে</h2>
+    <p>এটি Udemy কোর্স <em>"AWS CodePipeline Step by Step"</em>-এর ভিডিও subtitle থেকে তৈরি একটি অফলাইন রেফারেন্স হ্যান্ডবুক। সব content বাংলায় লেখা, তবে AWS service name, console label, CLI command এবং technical keyword ইংরেজিতে রাখা হয়েছে।</p>
+    <p>প্রতিটি চ্যাপ্টারে রয়েছে: ধারণার ব্যাখ্যা, Mermaid diagram, হাতে-কলমে ধাপ, key terms এবং self-check প্রশ্ন।</p>
+
+    <div class="callout callout-info" style="margin-top: 20px;">
+      <strong>কোর্সে ব্যবহৃত Region:</strong> সব উদাহরণ <code>eu-west-1</code> (Europe — Ireland) region-এ করা হয়েছে। আপনি অন্য region ব্যবহার করতে পারেন, তবে একই region রাখলে সহজ হবে।
+    </div>
+  </section>
+
+  <!-- Chapter Cards -->
+  <section class="intro-section" style="padding-top: 20px;">
+    <h2 class="section-heading">চ্যাপ্টার সূচি</h2>
+  </section>
+
+  <div class="chapter-grid">
+
+    <a href="chapters/01-introduction-aws-codepipeline-basics.html" class="chapter-card">
+      <div class="card-number">Chapter 1</div>
+      <div class="card-title">AWS CodePipeline — মৌলিক ধারণা</div>
+      <div class="card-desc">
+        CI/CD কী, CodePipeline concepts (Stage, Action, Artifact, Transition), S3 থেকে S3 প্রথম pipeline তৈরি, execution history দেখা, manual trigger এবং pipeline cleanup।
+      </div>
+      <div class="card-meta">৮টি লেকচার · S3 Source &amp; Deploy</div>
+    </a>
+
+    <a href="chapters/02-using-git-repositories-as-source-locations.html" class="chapter-card">
+      <div class="card-number">Chapter 2</div>
+      <div class="card-title">Git Repositories as Source Locations</div>
+      <div class="card-desc">
+        AWS CodeCommit deprecation ও GitHub-এ যাওয়ার কারণ, GitHub connection setup, GitHub-থেকে pipeline তৈরি, এবং git push দিয়ে pipeline trigger করার পদ্ধতি।
+      </div>
+      <div class="card-meta">৪টি লেকচার · GitHub Source</div>
+    </a>
+
+    <a href="chapters/03-building-your-code-with-aws-codebuild.html" class="chapter-card">
+      <div class="card-number">Chapter 3</div>
+      <div class="card-title">AWS CodeBuild দিয়ে Code Build করা</div>
+      <div class="card-desc">
+        CodeBuild concepts, <code>buildspec.yml</code> তৈরি, build stage pipeline-এ যোগ করা, build lifecycle, failure log দেখা এবং automated test action যোগ করা।
+      </div>
+      <div class="card-meta">৯টি লেকচার · buildspec.yml · Angular App</div>
+    </a>
+
+    <a href="chapters/04-deploying-to-ec2-instances-with-aws-codedeploy.html" class="chapter-card">
+      <div class="card-number">Chapter 4</div>
+      <div class="card-title">AWS CodeDeploy দিয়ে EC2-তে Deploy করা</div>
+      <div class="card-desc">
+        CodeDeploy agent setup, IAM role, <code>appspec.yml</code>, deployment lifecycle events, CloudWatch Logs, Auto Scaling Group-সহ In-Place ও Blue/Green deployment।
+      </div>
+      <div class="card-meta">১৭টি লেকচার · EC2 · ASG · Blue/Green</div>
+    </a>
+
+    <a href="chapters/05-cloudformation-deploy-actions-manual-approvals-and-notifications.html" class="chapter-card">
+      <div class="card-number">Chapter 5</div>
+      <div class="card-title">CloudFormation, Manual Approvals &amp; Notifications</div>
+      <div class="card-desc">
+        CloudFormation deploy action, staging environment তৈরি, manual approval gate, action variables, Delete Stack action, Superseded execution এবং SNS notification rules।
+      </div>
+      <div class="card-meta">৮টি লেকচার · CloudFormation · SNS</div>
+    </a>
+
+    <a href="chapters/06-building-docker-images-ecs-rolling-deployments.html" class="chapter-card">
+      <div class="card-number">Chapter 6</div>
+      <div class="card-title">Docker Images &amp; ECS Rolling Deployments</div>
+      <div class="card-desc">
+        Docker buildspec, ECR push, Secrets Manager &amp; Parameter Store env vars, ECS task definition, Fargate service, ECS Standard deploy action, rolling deployment failure handling ও ASG capacity providers।
+      </div>
+      <div class="card-meta">১৮টি লেকচার · Docker · ECR · ECS Fargate</div>
+    </a>
+
+  </div>
+
+  <!-- Appendix card -->
+  <section class="intro-section" style="padding-top: 4px; padding-bottom: 32px;">
+    <a href="appendix.html" class="chapter-card" style="max-width: 500px; display: flex;">
+      <div class="card-number">📎 Appendix</div>
+      <div class="card-title">CLI Cheatsheet, Glossary &amp; Troubleshooting</div>
+      <div class="card-desc">সমস্ত CLI command, buildspec/appspec syntax reference, শব্দকোষ এবং সমস্যা সমাধান টেবিল।</div>
+    </a>
+  </section>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

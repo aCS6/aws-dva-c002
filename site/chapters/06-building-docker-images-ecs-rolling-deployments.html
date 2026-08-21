@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chapter 6 — Docker Images &amp; ECS Rolling Deployments | CodePipeline Handbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+
+<!-- Sidebar Nav -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="../../index.html" class="sidebar-logo" title="← Back to DVA App"><img src="../../media/code-pipeline.svg" alt="" style="width:26px;height:26px;vertical-align:middle;margin-right:8px;filter:brightness(0) invert(1);"><span>CodePipeline<br><small style="font-weight:400;font-size:0.75rem;opacity:0.7;">Handbook</small></span></a><a href="../../index.html" style="display:block;margin-top:8px;font-size:0.74rem;color:#8899aa;text-decoration:none;padding:3px 0;">← DVA-C02 App</a>
+  </div>
+  <ul class="sidebar-nav">
+    <li><a href="../index.html">🏠 হোম</a></li>
+    <li class="nav-section">চ্যাপ্টারসমূহ</li>
+    <li><a href="01-introduction-aws-codepipeline-basics.html">১. CodePipeline Basics</a></li>
+    <li><a href="02-using-git-repositories-as-source-locations.html">২. Git Repositories as Source</a></li>
+    <li><a href="03-building-your-code-with-aws-codebuild.html">৩. AWS CodeBuild</a></li>
+    <li><a href="04-deploying-to-ec2-instances-with-aws-codedeploy.html">৪. AWS CodeDeploy (EC2)</a></li>
+    <li><a href="05-cloudformation-deploy-actions-manual-approvals-and-notifications.html">৫. CloudFormation, Approvals &amp; Notifications</a></li>
+    <li><a href="06-building-docker-images-ecs-rolling-deployments.html" class="active">৬. Docker &amp; ECS Deployments</a></li>
+    <li class="nav-section">রেফারেন্স</li>
+    <li><a href="../appendix.html">📎 Appendix</a></li>
+  </ul>
+</nav>
+
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+
+<main class="main-content">
+  <header class="chapter-header">
+    <div class="chapter-number">Chapter 6</div>
+    <h1>Docker Images ও ECS Rolling Deployments</h1>
+    <p class="chapter-subtitle">Docker buildspec, ECR push, Secrets Manager ও Parameter Store, ECS task definition, Fargate service, ECS Standard deploy action, rolling deployment failure ও automated rollback, এবং ASG capacity provider-এর সম্পূর্ণ গাইড।</p>
+  </header>
+
+  <!-- In-page TOC -->
+  <nav class="toc-box" aria-label="এই পেজে যা আছে">
+    <h2 class="toc-title">এই পেজে যা আছে</h2>
+    <ol class="toc-list">
+      <li><a href="#what-you-will-learn">এই চ্যাপ্টারে যা শিখবেন</a></li>
+      <li><a href="#docker-ecs-intro">Docker ও Amazon ECS — পরিচিতি</a></li>
+      <li><a href="#docker-buildspec">Docker Build-এর জন্য CodeBuild Buildspec</a></li>
+      <li><a href="#pipeline-docker-build">Docker Image Build করার Pipeline</a></li>
+      <li><a href="#secrets-manager-env">Secrets Manager Environment Variables</a></li>
+      <li><a href="#parameter-store-env">Parameter Store Environment Variables</a></li>
+      <li><a href="#ecr-push">Docker Image Amazon ECR-এ Push করা</a></li>
+      <li><a href="#task-definition">ECS Task Definition তৈরি করা</a></li>
+      <li><a href="#ecs-cluster">ECS Cluster তৈরি করা</a></li>
+      <li><a href="#fargate-service">Fargate-এ ECS Service তৈরি করা</a></li>
+      <li><a href="#ecs-deploy-action">Pipeline-এ ECS Standard Deploy Action</a></li>
+      <li><a href="#commit-id-tagging">Commit ID দিয়ে Docker Image Tagging</a></li>
+      <li><a href="#ecr-public-gallery">ECR Public Gallery ব্যবহার করা</a></li>
+      <li><a href="#ecs-failure">ECS Rolling Deployment Failure</a></li>
+      <li><a href="#circuit-breaker">ECS Deployment Circuit Breaker ও Rollback</a></li>
+      <li><a href="#min-max-tasks">Min ও Max Running Tasks</a></li>
+      <li><a href="#asg-capacity-provider">ASG Capacity Provider-এ ECS Service</a></li>
+      <li><a href="#key-terms">গুরুত্বপূর্ণ শব্দ</a></li>
+      <li><a href="#summary">সারাংশ</a></li>
+      <li><a href="#self-check">নিজেকে যাচাই করুন</a></li>
+    </ol>
+  </nav>
+
+  <!-- What you'll learn -->
+  <section id="what-you-will-learn">
+    <h2>এই চ্যাপ্টারে যা শিখবেন</h2>
+    <ul>
+      <li>Docker container ও Amazon ECS-এর মূল concepts: task definition, task, service, cluster, capacity provider।</li>
+      <li>Multi-stage Dockerfile এবং CodeBuild buildspec দিয়ে Docker image build করা।</li>
+      <li>Docker Hub, Secrets Manager এবং Parameter Store থেকে credentials CodeBuild-এ pass করা।</li>
+      <li>Amazon ECR-এ private repository তৈরি এবং CodeBuild থেকে image push করা।</li>
+      <li>ECS task definition তৈরি করা: container name, image URI, CPU/memory, Fargate/EC2।</li>
+      <li>ECS cluster তৈরি করা: Fargate ও Auto Scaling Group capacity provider।</li>
+      <li>ALB সহ ECS Fargate service তৈরি করা এবং rolling deployment configure করা।</li>
+      <li>Pipeline-এ ECS Standard deploy action যোগ করা এবং <code>imagedefinitions.json</code> generate করা।</li>
+      <li><code>CODEBUILD_RESOLVED_SOURCE_VERSION</code> দিয়ে commit ID-based Docker image tag।</li>
+      <li>ECR Public Gallery থেকে base image pull করা — Docker Hub pull limit এড়ানো।</li>
+      <li>ECS rolling deployment failure scenario এবং deployment circuit breaker + automated rollback।</li>
+      <li>Min/Max running tasks percentage-এর প্রভাব এবং ASG capacity provider-এ rolling deployment।</li>
+    </ul>
+  </section>
+
+  <!-- Section 1: Docker & ECS Intro -->
+  <section id="docker-ecs-intro">
+    <h2>Docker ও Amazon ECS — পরিচিতি</h2>
+
+    <h3>Docker কী?</h3>
+    <p>Docker হলো একটি containerization tool যা application-কে standardized unit — container-এ package করে। Container-এ application code, dependencies, system libraries এবং runtime সব থাকে। ফলে server configure না করেই যেকোনো Docker Engine-এ চালানো যায়।</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    SRC["Source Code\n+ Dockerfile"] -->|docker build| IMG["Docker Image"]
+    IMG -->|docker push| ECR["Amazon ECR\n(Private Registry)"]
+    ECR -->|ECS pulls image| TASK["ECS Task\n(Running Container)"]
+    TASK --> ALB["Application Load Balancer"]
+    ALB --> USER["Users"]
+      </div>
+      <p class="diagram-caption">Docker build → ECR push → ECS deployment flow।</p>
+    </div>
+
+    <h3>Amazon ECS Concepts</h3>
+    <dl>
+      <dt><strong>Task Definition</strong></dt>
+      <dd>Container-এর specification JSON file। Docker image, CPU/memory, ports, environment variables define করে। Immutable — update করলে নতুন revision তৈরি হয়।</dd>
+
+      <dt><strong>Task</strong></dt>
+      <dd>Task definition-এর running instance। Container(s) চলার environment।</dd>
+
+      <dt><strong>ECS Service</strong></dt>
+      <dd>নির্দিষ্ট সংখ্যক task সবসময় running রাখার mechanism। ALB attach করা যায়। Rolling deployment-এর primary unit।</dd>
+
+      <dt><strong>ECS Cluster</strong></dt>
+      <dd>Tasks ও services-এর logical group। Regional resource।</dd>
+
+      <dt><strong>Fargate Capacity Provider</strong></dt>
+      <dd>Serverless infrastructure — AWS manage করে, EC2 instance manage করতে হয় না।</dd>
+
+      <dt><strong>Auto Scaling Group Capacity Provider</strong></dt>
+      <dd>EC2 container instances-এর ASG — ECS managed scaling সহ।</dd>
+    </dl>
+
+    <h3>ECS Deployment Types</h3>
+    <ul>
+      <li><strong>ECS Standard (Rolling):</strong> CodePipeline-এর direct integration। <code>imagedefinitions.json</code> দিয়ে নতুন task definition revision তৈরি করে rolling update করে।</li>
+      <li><strong>ECS Blue/Green (CodeDeploy):</strong> ALB traffic shifting সহ। এই section-এ cover হয়নি।</li>
+    </ul>
+  </section>
+
+  <!-- Section 2: Docker Buildspec -->
+  <section id="docker-buildspec">
+    <h2>Docker Build-এর জন্য CodeBuild Buildspec</h2>
+
+    <h3>Dockerfile (Multi-stage)</h3>
+    <pre><code># Build stage — Angular app build করে
+FROM node:20 AS builder
+WORKDIR /my-project
+COPY . .
+RUN npm install && ng build -c production
+
+# Final stage — শুধু static files + Nginx
+FROM nginx:1.25
+EXPOSE 80
+COPY --from=builder /my-project/dist/my-angular-project /usr/share/nginx/html</code></pre>
+
+    <p>Multi-stage Dockerfile-এর সুবিধা: final image-এ শুধু deployable files থাকে — node_modules, Angular CLI, source code বাদ।</p>
+
+    <h3>buildspec.yml (Docker Hub push)</h3>
+    <pre><code>version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      # Docker Hub login (pull limit এড়াতে)
+      - echo ${DOCKERHUB_TOKEN} | docker login -u ${DOCKERHUB_USER} --password-stdin
+
+  build:
+    commands:
+      - docker build -t my-angular-app:latest .
+
+  post_build:
+    commands:
+      - docker tag my-angular-app:latest ${DOCKERHUB_USER}/my-angular-app:latest
+      - docker push ${DOCKERHUB_USER}/my-angular-app:latest</code></pre>
+
+    <div class="callout callout-info">
+      Docker Hub pull limit: unauthenticated user-রা CodeBuild-এর অন্যান্য execution-এর সাথে limit share করে। Login করলে নিজের limit পাওয়া যায়।
+    </div>
+
+    <h3>CodeBuild Project-এর বিশেষ Settings (Docker Build)</h3>
+    <ul>
+      <li><strong>Privileged mode:</strong> ✅ Enable করতে হবে — Docker daemon access-এর জন্য। CodeBuild container-এর ভেতরে Docker চালাতে privileged mode দরকার।</li>
+      <li><strong>Architecture:</strong> x86_64 (Intel-based) বা aarch64 (ARM) — deploy target-এর architecture-এর সাথে match করতে হবে।</li>
+      <li>Environment variables: <code>DOCKERHUB_USER</code>, <code>DOCKERHUB_TOKEN</code> — pipeline action বা CodeBuild project-এ define করুন।</li>
+    </ul>
+  </section>
+
+  <!-- Section 3: Pipeline -->
+  <section id="pipeline-docker-build">
+    <h2>Docker Image Build করার Pipeline</h2>
+    <ol>
+      <li>Source: GitHub repository (Dockerfile ও buildspec.yml সহ)।</li>
+      <li>Build: CodeBuild project → <strong>Privileged mode enable</strong>।</li>
+      <li>Deploy: (পরে যোগ হবে) — প্রথমে শুধু build stage।</li>
+    </ol>
+    <p>Environment variables pipeline build action-এ define করা যায় — এটি CodeBuild project configuration-এর চেয়ে higher precedence।</p>
+
+    <h3>Environment Variable Precedence (Lowest → Highest)</h3>
+    <ol>
+      <li>buildspec file</li>
+      <li>CodeBuild project configuration</li>
+      <li>CodePipeline action configuration</li>
+    </ol>
+  </section>
+
+  <!-- Section 4: Secrets Manager -->
+  <section id="secrets-manager-env">
+    <h2>Secrets Manager Environment Variables</h2>
+    <p>Plaintext environment variables পাইপলাইনে visible থাকে। AWS Secrets Manager-এ credentials encrypted রাখা যায়।</p>
+
+    <h3>Secret তৈরি</h3>
+    <ol>
+      <li>AWS Secrets Manager → <strong>Store a new secret</strong>।</li>
+      <li>Secret type: <strong>Other type of secret</strong>।</li>
+      <li>Key/value: <code>token</code> = Docker Hub token, <code>user</code> = Docker Hub username।</li>
+      <li>Secret name: <code>dockerhub</code></li>
+    </ol>
+
+    <h3>CodeBuild-এ Permission যোগ করা</h3>
+    <p>CodeBuild project-এর IAM role-এ inline policy:</p>
+    <pre><code>{
+  "Effect": "Allow",
+  "Action": "secretsmanager:GetSecretValue",
+  "Resource": "arn:aws:secretsmanager:REGION:ACCOUNT:secret:dockerhub-*"
+}</code></pre>
+
+    <h3>buildspec-এ Reference করা</h3>
+    <pre><code>env:
+  secrets-manager:
+    DOCKERHUB_TOKEN: dockerhub:token
+    DOCKERHUB_USER: dockerhub:user</code></pre>
+
+    <div class="callout callout-warning">
+      Secrets Manager প্রতিটি secret-এর জন্য charge করে। প্রয়োজনে free alternative হিসেবে Parameter Store ব্যবহার করুন।
+    </div>
+  </section>
+
+  <!-- Section 5: Parameter Store -->
+  <section id="parameter-store-env">
+    <h2>Parameter Store Environment Variables</h2>
+    <p>AWS Systems Manager Parameter Store হলো Secrets Manager-এর একটি <strong>free alternative</strong>। Standard tier-এ encrypted parameter store করা যায়।</p>
+
+    <h3>Parameter তৈরি</h3>
+    <ol>
+      <li>SSM Console → Parameter Store → <strong>Create parameter</strong>।</li>
+      <li>Name: <code>/dockerhub/token</code> (path hierarchy ব্যবহার করুন)।</li>
+      <li>Tier: <strong>Standard</strong> (free, 4KB পর্যন্ত)।</li>
+      <li>Type: <strong>SecureString</strong> — KMS দিয়ে encrypted।</li>
+      <li>দ্বিতীয় parameter: <code>/dockerhub/user</code></li>
+    </ol>
+
+    <h3>CodeBuild IAM Permission</h3>
+    <pre><code>{
+  "Effect": "Allow",
+  "Action": "ssm:GetParameters",
+  "Resource": "arn:aws:ssm:REGION:ACCOUNT:parameter/dockerhub/*"
+}</code></pre>
+    <p>Path-based parameter name ব্যবহার করলে wildcard দিয়ে সব parameter-এ একটি rule কাজ করে।</p>
+
+    <h3>buildspec-এ Reference করা</h3>
+    <pre><code>env:
+  parameter-store:
+    DOCKERHUB_TOKEN: /dockerhub/token
+    DOCKERHUB_USER: /dockerhub/user</code></pre>
+
+    <div class="comparison-table">
+      <table>
+        <thead><tr><th>বৈশিষ্ট্য</th><th>Secrets Manager</th><th>Parameter Store</th></tr></thead>
+        <tbody>
+          <tr><td>Cost</td><td>Paid (per secret)</td><td>Free (standard tier)</td></tr>
+          <tr><td>Encryption</td><td>Automatic</td><td>Optional (SecureString)</td></tr>
+          <tr><td>Rotation</td><td>Automatic (RDS, etc.)</td><td>Manual</td></tr>
+          <tr><td>Best for</td><td>Database passwords, API keys</td><td>Config values, simple credentials</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Section 6: ECR Push -->
+  <section id="ecr-push">
+    <h2>Docker Image Amazon ECR-এ Push করা</h2>
+
+    <h3>ECR Repository তৈরি</h3>
+    <ol>
+      <li>Amazon ECR Console → <strong>Create repository</strong>।</li>
+      <li>Type: Private।</li>
+      <li>Name: <code>my-angular-app</code></li>
+      <li>Tag immutability: Disable (same tag দিয়ে push করার জন্য)।</li>
+    </ol>
+
+    <h3>CodeBuild IAM Permission (ECR)</h3>
+    <p>CodeBuild project-এর IAM role-এ <code>codebuild-ecr-policy.json</code>-এর permissions add করুন। ECR login ও push-এর জন্য প্রয়োজনীয় permissions:</p>
+    <pre><code>ecr:GetAuthorizationToken
+ecr:BatchCheckLayerAvailability
+ecr:GetDownloadUrlForLayer
+ecr:BatchGetImage
+ecr:PutImage
+ecr:InitiateLayerUpload
+ecr:UploadLayerPart
+ecr:CompleteLayerUpload</code></pre>
+
+    <h3>buildspec.yml (ECR push)</h3>
+    <pre><code>version: 0.2
+
+env:
+  variables:
+    ECR_REPO_NAME: my-angular-app
+  parameter-store:
+    DOCKERHUB_TOKEN: /dockerhub/token
+    DOCKERHUB_USER: /dockerhub/user
+
+phases:
+  pre_build:
+    commands:
+      # Docker Hub login (pull limit এড়াতে)
+      - echo ${DOCKERHUB_TOKEN} | docker login -u ${DOCKERHUB_USER} --password-stdin
+      
+      # ECR login
+      - ECR_MAIN_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+      - aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_MAIN_URI}
+      
+      # ECR image URI (commit ID tag)
+      - ECR_IMAGE_URI=${ECR_MAIN_URI}/${ECR_REPO_NAME}:${CODEBUILD_RESOLVED_SOURCE_VERSION:0:8}
+
+  build:
+    commands:
+      - docker build -t my-angular-app:latest .
+
+  post_build:
+    commands:
+      - docker tag my-angular-app:latest ${ECR_IMAGE_URI}
+      - docker push ${ECR_IMAGE_URI}
+      
+      # ECS deploy action-এর জন্য imagedefinitions.json তৈরি
+      - printf '[{"name":"angular-app","imageUri":"%s"}]' ${ECR_IMAGE_URI} > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json</code></pre>
+
+    <h3>গুরুত্বপূর্ণ Environment Variables</h3>
+    <div class="comparison-table">
+      <table>
+        <thead><tr><th>Variable</th><th>Source</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>AWS_REGION</td><td>CodeBuild built-in</td><td>Pipeline-এর region</td></tr>
+          <tr><td>AWS_ACCOUNT_ID</td><td>Custom (CodeBuild config)</td><td>AWS account number</td></tr>
+          <tr><td>CODEBUILD_RESOLVED_SOURCE_VERSION</td><td>CodePipeline-provided</td><td>40-char Git commit ID</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Section 7: Task Definition -->
+  <section id="task-definition">
+    <h2>ECS Task Definition তৈরি করা</h2>
+    <ol>
+      <li>ECS Console → Task definitions → <strong>Create new task definition</strong>।</li>
+      <li>Task definition family name: <code>my-angular-task-definition</code></li>
+      <li>Container name: <code>angular-app</code></li>
+      <li>Image URI: ECR repository-এর latest image URI কপি করুন।</li>
+      <li>Port: 80 (Nginx)।</li>
+      <li>App environment: <strong>AWS Fargate</strong> ও <strong>Amazon EC2</strong> উভয়ই।</li>
+      <li>OS/Architecture: <strong>Linux/X86_64</strong> (Intel-based build environment-এর সাথে match)।</li>
+      <li>Task size: CPU = 0.25 vCPU, Memory = 0.5 GB (smallest)।</li>
+    </ol>
+
+    <div class="callout callout-warning">
+      Architecture মেলানো জরুরি। Intel-based CodeBuild-এ build করা image ARM-based Fargate-এ চলবে না এবং vice versa।
+    </div>
+
+    <div class="callout callout-info">
+      Task definition update করা যায় না — নতুন revision তৈরি হয়। ECS deploy action প্রতিটি deployment-এ নতুন revision তৈরি করে।
+    </div>
+  </section>
+
+  <!-- Section 8: ECS Cluster -->
+  <section id="ecs-cluster">
+    <h2>ECS Cluster তৈরি করা</h2>
+    <ol>
+      <li>ECS Console → Clusters → <strong>Create cluster</strong>।</li>
+      <li>Cluster name: <code>my-cluster</code></li>
+      <li>Networking: default VPC।</li>
+      <li>Infrastructure: AWS Fargate (default, always added) + <strong>Amazon EC2 instances</strong> (ASG capacity provider-এর জন্য যোগ করুন)।</li>
+    </ol>
+
+    <h3>ASG Capacity Provider Configuration</h3>
+    <ul>
+      <li>OS: Amazon Linux 2 (Intel-based)।</li>
+      <li>EC2 instance type: t3.micro।</li>
+      <li>Min capacity: 0, Max: 5।</li>
+    </ul>
+    <p>Min = 0 মানে কোনো task না থাকলে instance নেই — cost বাঁচায়। ECS নিজেই ASG scale করবে।</p>
+  </section>
+
+  <!-- Section 9: Fargate Service -->
+  <section id="fargate-service">
+    <h2>Fargate-এ ECS Service তৈরি করা</h2>
+    <ol>
+      <li>ECS Cluster → Services tab → <strong>Deploy</strong>।</li>
+      <li>Capacity provider: <strong>FARGATE</strong>।</li>
+      <li>Application type: <strong>Service</strong>।</li>
+      <li>Task definition: আগে তৈরি করা, latest revision।</li>
+      <li>Service name: <code>my-rolling-service</code></li>
+      <li>Desired tasks: <strong>2</strong></li>
+      <li>Deployment type: <strong>Rolling update</strong>।</li>
+      <li>Min running tasks: <strong>100%</strong>, Max: <strong>200%</strong>।</li>
+      <li>Deployment circuit breaker: প্রথমে <strong>Disable</strong> করুন (failure scenario দেখার জন্য)।</li>
+      <li>Networking: default VPC, all subnets, Public IP enable।</li>
+      <li>Load balancer: <strong>Application Load Balancer</strong> → Create new → <code>my-rolling-service-alb</code>।</li>
+      <li>Target group: <code>my-rolling-service-target-group</code>, HTTP, health check path <code>/</code>।</li>
+      <li>Health check grace period: <strong>0</strong>।</li>
+    </ol>
+
+    <div class="callout callout-warning">
+      <strong>Deregistration delay কমান:</strong> Default 300s (5 min) deployment slow করে। Target group-এর Attributes-এ <strong>30s</strong>-এ নামিয়ে রাখুন।
+    </div>
+
+    <div class="callout callout-info">
+      Load balancer তৈরির পরে ALB-এ একটি নতুন security group attach করতে হবে যা HTTP port 80 allow করে। Default security group শুধুমাত্র VPC-internal communication-এর জন্য।
+    </div>
+  </section>
+
+  <!-- Section 10: ECS Deploy Action -->
+  <section id="ecs-deploy-action">
+    <h2>Pipeline-এ ECS Standard Deploy Action</h2>
+
+    <h3>imagedefinitions.json কী?</h3>
+    <p>ECS Standard deploy action-এর জন্য CodeBuild-কে একটি JSON file তৈরি করতে হয় যা বলে কোন container-কে কোন new image দিয়ে update করতে হবে।</p>
+    <pre><code>[
+  {
+    "name": "angular-app",
+    "imageUri": "123456789.dkr.ecr.eu-west-1.amazonaws.com/my-angular-app:abc12345"
+  }
+]</code></pre>
+    <p><code>name</code> = task definition-এর container name। <code>imageUri</code> = নতুন Docker image-এর URI।</p>
+
+    <h3>Deploy Action Configure করা</h3>
+    <ol>
+      <li>Pipeline → Edit → Build stage-এর পরে <strong>Add stage</strong> → name: <code>Deploy</code>।</li>
+      <li><strong>Add action group</strong> → name: <code>DeployToECS</code>।</li>
+      <li>Action provider: <strong>Amazon ECS</strong> (Blue/Green নয়)।</li>
+      <li>Input artifact: <strong>BuildArtifact</strong>।</li>
+      <li>Cluster name: <code>my-cluster</code>।</li>
+      <li>Service name: <code>my-rolling-service</code>।</li>
+      <li>Image definitions file: <code>imagedefinitions.json</code> (default)।</li>
+    </ol>
+
+    <h3>Rolling Deployment Flow</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant CP as CodePipeline
+    participant CB as CodeBuild
+    participant ECR as Amazon ECR
+    participant ECS as Amazon ECS
+
+    CP->>CB: Trigger build
+    CB->>ECR: docker push new-image:commit-id
+    CB->>CP: Output: imagedefinitions.json (BuildArtifact)
+    CP->>ECS: Deploy action (imagedefinitions.json)
+    ECS->>ECS: Create new task definition revision
+    ECS->>ECS: Launch 2 new tasks (new image)
+    ECS->>ECS: Register new tasks to ALB target group
+    ECS->>ECS: Deregister old tasks from ALB
+    ECS->>ECS: Stop old tasks
+    ECS-->>CP: Deployment complete
+      </div>
+      <p class="diagram-caption">ECS Standard rolling deployment flow: CodeBuild → ECR push → ECS rolling update।</p>
+    </div>
+  </section>
+
+  <!-- Section 11: Commit ID Tagging -->
+  <section id="commit-id-tagging">
+    <h2>Commit ID দিয়ে Docker Image Tagging</h2>
+    <p>সমস্যা: <code>latest</code> tag দিয়ে push করলে পুরনো image untagged হয়ে যায়। Rollback-এ নতুন task-গুলো failed image pull করে।</p>
+
+    <h3>সমাধান: CODEBUILD_RESOLVED_SOURCE_VERSION</h3>
+    <p>CodePipeline এই environment variable-এ Git commit ID (40 chars) pass করে।</p>
+    <pre><code># buildspec-এ ECR_IMAGE_URI-তে latest-এর বদলে:
+ECR_IMAGE_URI=${ECR_MAIN_URI}/${ECR_REPO_NAME}:${CODEBUILD_RESOLVED_SOURCE_VERSION:0:8}</code></pre>
+    <p><code>:0:8</code> syntax bash substring — index 0 থেকে 8 characters।</p>
+
+    <h3>সুবিধা</h3>
+    <ul>
+      <li>প্রতিটি image unique tag — পুরনো image accessible থাকে।</li>
+      <li>Task definition revision-এ image URI-তে commit ID দেখা যায়।</li>
+      <li>Rollback হলেও পুরনো task-গুলো correct image চালায়।</li>
+      <li>Image tag দিয়ে CodeCommit-এ সেই commit খুঁজে পাওয়া যায়।</li>
+    </ul>
+  </section>
+
+  <!-- Section 12: ECR Public Gallery -->
+  <section id="ecr-public-gallery">
+    <h2>ECR Public Gallery ব্যবহার করা</h2>
+    <p>Docker Hub-এ Docker pull limit আছে। ECR Public Gallery-তে Docker official images থাকে — AWS network-এর ভেতরে।</p>
+
+    <h3>Dockerfile-এ base image পরিবর্তন</h3>
+    <pre><code># আগে (Docker Hub):
+FROM node:20 AS builder
+FROM nginx:1.25
+
+# পরে (ECR Public Gallery):
+FROM public.ecr.aws/docker/library/node:20 AS builder
+FROM public.ecr.aws/docker/library/nginx:1.25</code></pre>
+
+    <p>Pattern: <code>public.ecr.aws/docker/library/IMAGE_NAME:TAG</code></p>
+
+    <h3>buildspec-এ ECR Public login যোগ করা</h3>
+    <pre><code>pre_build:
+  commands:
+    # ECR Public Gallery login (us-east-1 required)
+    - aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws</code></pre>
+
+    <div class="callout callout-warning">
+      ECR Public Gallery login-এ region অবশ্যই <strong>us-east-1</strong> দিতে হবে — অন্য region কাজ করবে না।
+    </div>
+
+    <h3>CodeBuild IAM Permission</h3>
+    <p>CodeBuild role-এ <code>AmazonElasticContainerRegistryPublicReadOnly</code> managed policy attach করুন।</p>
+
+    <p>Docker Hub login তখনও রাখার দরকার নেই কারণ base images ECR থেকে আসছে। Docker Hub login command এবং credentials পুরোটা সরিয়ে ফেলা যায়।</p>
+  </section>
+
+  <!-- Section 13: ECS Failure -->
+  <section id="ecs-failure">
+    <h2>ECS Rolling Deployment Failure</h2>
+    <p>Deployment circuit breaker disable থাকলে ব্যর্থ deployment কী করে?</p>
+
+    <h3>Failure Scenario</h3>
+    <ul>
+      <li>নতুন Docker image build হয় কিন্তু Nginx নেই (উদাহরণে Ubuntu দিয়ে replace করা হয়)।</li>
+      <li>ECS নতুন task launch করে, ALB target group-এ register করার চেষ্টা করে।</li>
+      <li>Health check fail করে কারণ HTTP respond করতে পারছে না।</li>
+      <li>ECS service task deregister করে, আবার নতুন task launch করে।</li>
+      <li>এটি <strong>infinite loop</strong> — circuit breaker ছাড়া ECS নিজে থেকে থামে না।</li>
+    </ul>
+
+    <div class="callout callout-danger">
+      Circuit breaker ছাড়া failed deployment হলে ECS forever নতুন task launch ও fail করতে থাকে। এটি দেখতে — <strong>ECS service event list</strong>-এ বারবার task start/stop event আসতে থাকে।
+    </div>
+
+    <h3>Stopping a Failed Pipeline Execution</h3>
+    <p>Pipeline-এর <strong>Stop execution</strong> বাটন → <strong>Stop and abandon</strong> — তাৎক্ষণিকভাবে execution fail করে mark করে। কিন্তু ECS deployment নিজে থেকে থামে না।</p>
+    <p>Fix করতে: Dockerfile ঠিক করে নতুন commit push করুন → pipeline trigger হবে → নতুন successful deployment শুরু হবে → ECS primary deployment update হবে।</p>
+  </section>
+
+  <!-- Section 14: Circuit Breaker -->
+  <section id="circuit-breaker">
+    <h2>ECS Deployment Circuit Breaker ও Rollback</h2>
+
+    <h3>Circuit Breaker কীভাবে কাজ করে</h3>
+    <p>Threshold calculation: <code>max(10, min(200, ceil(desired_tasks / 2)))</code></p>
+    <p>Desired tasks = 2 হলে: ceil(2/2) = 1, কিন্তু minimum 10। তাই threshold = <strong>10 task failures</strong>।</p>
+    <p>10টি task fail করলে ECS deployment-কে failure mark করে। Rollback enabled থাকলে previous successful deployment-কে primary করে।</p>
+
+    <h3>Enable করার ধাপ</h3>
+    <ol>
+      <li>ECS service → <strong>Edit service</strong>।</li>
+      <li>Deployment failure detection → <strong>Use the Amazon ECS deployment circuit breaker</strong> enable।</li>
+      <li><strong>Rollbacks on failures</strong> enable।</li>
+      <li><strong>Update</strong>।</li>
+    </ol>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> InProgress: New deployment starts
+    InProgress --> TaskFail: Task health check fails
+    TaskFail --> InProgress: ECS tries replacement
+    InProgress --> CircuitTripped: 10+ task failures
+    CircuitTripped --> Rollback: Rollback enabled
+    Rollback --> [*]: Previous deployment becomes primary
+    CircuitTripped --> Failed: Rollback disabled
+    Failed --> [*]: Service stuck, manual fix needed
+      </div>
+      <p class="diagram-caption">ECS deployment circuit breaker flow।</p>
+    </div>
+
+    <div class="callout callout-info">
+      Rollback enabled থাকলে failed deployment শেষে ECS পুরনো successful deployment-কে primary করে — service scale করতে পারে। Rollback disabled থাকলে failed deployment primary-ই থাকে — scale out করা যায় না।
+    </div>
+  </section>
+
+  <!-- Section 15: Min/Max Running Tasks -->
+  <section id="min-max-tasks">
+    <h2>Min ও Max Running Tasks</h2>
+
+    <div class="comparison-table">
+      <table>
+        <thead>
+          <tr><th>Setting</th><th>Default</th><th>মানে</th><th>Rounding</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Minimum running tasks</td><td>100%</td><td>Deployment-এর সময় minimum এই % task serving থাকবে</td><td>Round UP</td></tr>
+          <tr><td>Maximum running tasks</td><td>200%</td><td>Deployment-এর সময় maximum এই % পর্যন্ত task চলতে পারবে</td><td>Round DOWN</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>উদাহরণ: 3 tasks, 50% min, 150% max</h3>
+    <ul>
+      <li>Min: ceil(3 × 0.5) = ceil(1.5) = <strong>2 tasks</strong> সবসময় running।</li>
+      <li>Max: floor(3 × 1.5) = floor(4.5) = <strong>4 tasks</strong> maximum।</li>
+      <li>পার্থক্য: 4-3=1 replacement task একসাথে launch → 3-2=1 original task একসাথে stop।</li>
+      <li>Rolling deployment: একটি একটি করে replace — সত্যিকারের rolling।</li>
+    </ul>
+
+    <h3>Default 100%/200% (2 tasks)</h3>
+    <ul>
+      <li>Min: 2 tasks সবসময় running।</li>
+      <li>Max: 4 tasks। সব 2 replacement একসাথে launch, তারপর সব 2 পুরনো stop।</li>
+      <li>Blue/Green-এর মতো দেখায় — AWS এটিকে rolling বলে।</li>
+    </ul>
+  </section>
+
+  <!-- Section 16: ASG Capacity Provider -->
+  <section id="asg-capacity-provider">
+    <h2>ASG Capacity Provider-এ ECS Service</h2>
+    <p>Fargate-এর পরিবর্তে EC2 container instances-এ ECS service deploy করা যায়।</p>
+
+    <h3>ASG Scaling Mechanism</h3>
+    <ul>
+      <li>Scale out: Task launch দরকার কিন্তু capacity নেই → 1 মিনিট পর CloudWatch alarm trigger → ASG scale out।</li>
+      <li>Scale in: 15 মিনিট idle capacity থাকলে → alarm trigger → idle instance terminate।</li>
+    </ul>
+
+    <h3>Managed Instance Protection</h3>
+    <p>Scale-in-এ active task-সহ instance terminate না হওয়ার জন্য enable করুন:</p>
+    <ol>
+      <li>ECS Cluster → Capacity Providers tab → Auto Scaling Group provider নির্বাচন → Update।</li>
+      <li><strong>Managed termination protection</strong> enable।</li>
+    </ol>
+
+    <div class="callout callout-warning">
+      ASG capacity provider ব্যবহার করলে deployment-এর আগে নিশ্চিত করুন যে maximum capacity limit reach হয়নি। না হলে নতুন task provisioning state-এ আটকে থাকবে।
+    </div>
+
+    <h3>Fargate vs ASG Capacity Provider তুলনা</h3>
+    <div class="comparison-table">
+      <table>
+        <thead><tr><th>বিষয়</th><th>Fargate</th><th>ASG Capacity Provider</th></tr></thead>
+        <tbody>
+          <tr><td>Infrastructure management</td><td>AWS manage করে</td><td>আপনি manage করেন (max limit)</td></tr>
+          <tr><td>Deployment speed</td><td>তেজি</td><td>আস্তে (new instance launch হতে পারে)</td></tr>
+          <tr><td>Cost</td><td>Per task</td><td>Per EC2 instance</td></tr>
+          <tr><td>CodePipeline deployment</td><td>একই</td><td>একই</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Key Terms -->
+  <section id="key-terms">
+    <h2>গুরুত্বপূর্ণ শব্দ</h2>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <dt>Docker Image</dt>
+        <dd>Container-এর executable package — code, runtime, libraries সহ।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Dockerfile</dt>
+        <dd>Docker image build করার instruction file।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Multi-stage Build</dt>
+        <dd>একাধিক FROM instruction — final image minimal রাখার technique।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Amazon ECR</dt>
+        <dd>AWS-এর managed Docker image registry।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>ECS Task Definition</dt>
+        <dd>Container specification — image, CPU, memory, ports।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>ECS Service</dt>
+        <dd>Desired number of tasks সবসময় running রাখার mechanism।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>imagedefinitions.json</dt>
+        <dd>ECS deploy action-এর contract file — container name + new image URI।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>CODEBUILD_RESOLVED_SOURCE_VERSION</dt>
+        <dd>CodePipeline-এর Git commit ID environment variable।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Deployment Circuit Breaker</dt>
+        <dd>ECS-এর automatic failure detection — threshold-based।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Privileged Mode</dt>
+        <dd>Docker build-এর জন্য CodeBuild container-এ Docker daemon access।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>ECR Public Gallery</dt>
+        <dd>Docker official images-এর AWS-hosted registry।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Fargate Capacity Provider</dt>
+        <dd>Serverless ECS infrastructure — AWS managed।</dd>
+      </div>
+    </div>
+  </section>
+
+  <!-- Summary -->
+  <section id="summary">
+    <h2>সারাংশ</h2>
+    <ul>
+      <li>Docker image build করতে CodeBuild-এ <strong>Privileged mode</strong> অবশ্যই enable করতে হবে।</li>
+      <li>Docker Hub pull limit এড়াতে ECR Public Gallery ব্যবহার করুন। Login command: <code>aws ecr-public get-login-password --region us-east-1</code>।</li>
+      <li>Credentials Secrets Manager বা Parameter Store-এ রাখুন — buildspec-এ <code>secrets-manager:</code> বা <code>parameter-store:</code> section।</li>
+      <li>ECR push করতে CodeBuild role-এ ECR permissions দিতে হবে।</li>
+      <li>ECS Standard deploy action-এর জন্য buildspec-এ <code>imagedefinitions.json</code> generate করতে হবে।</li>
+      <li><code>latest</code> tag-এর বদলে <code>CODEBUILD_RESOLVED_SOURCE_VERSION:0:8</code> দিয়ে commit ID tag করুন।</li>
+      <li>ECS deployment circuit breaker + rollback enable করুন। Threshold: max(10, ceil(desired/2))।</li>
+      <li>Target group-এর deregistration delay 30s-এ নামান — deployment faster হবে।</li>
+      <li>ASG capacity provider-এ max capacity limit reach হলে new task provisioning-এ আটকে যায়।</li>
+    </ul>
+  </section>
+
+  <!-- Self Check -->
+  <section id="self-check">
+    <h2>নিজেকে যাচাই করুন</h2>
+
+    <details>
+      <summary>১. CodeBuild-এ Docker image build করতে কোন বিশেষ setting enable করতে হবে এবং কেন?</summary>
+      <div class="answer">
+        <p><strong>Privileged mode</strong> enable করতে হবে। CodeBuild নিজেই একটি Docker container-এ চলে। Docker-in-Docker (Docker daemon access) করতে privileged mode দরকার — না হলে <code>docker build</code> command fail করে।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>২. imagedefinitions.json file-এ কী থাকে এবং কে তৈরি করে?</summary>
+      <div class="answer">
+        <p>Format:</p>
+        <pre><code>[{"name":"CONTAINER_NAME","imageUri":"ECR_IMAGE_URI"}]</code></pre>
+        <p><code>name</code> = task definition-এর container name। <code>imageUri</code> = নতুন image URI।</p>
+        <p>CodeBuild project buildspec-এর post_build phase-এ <code>printf</code> command দিয়ে তৈরি করে এবং artifact হিসেবে export করে। ECS deploy action এটি পড়ে নতুন task definition revision তৈরি করে।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৩. ECS deployment circuit breaker-এর threshold কীভাবে calculate হয়? 2 tasks-এর service-এ কত?</summary>
+      <div class="answer">
+        <p>Formula: <code>max(10, min(200, ceil(desired_tasks / 2)))</code></p>
+        <p>2 tasks: ceil(2/2) = 1, কিন্তু minimum 10। তাই threshold = <strong>10 task failures</strong>।</p>
+        <p>10টি task fail করার পরেই circuit breaker trigger হবে।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৪. ECR Public Gallery-তে Docker official images-এর URI format কী?</summary>
+      <div class="answer">
+        <p><code>public.ecr.aws/docker/library/IMAGE_NAME:TAG</code></p>
+        <p>উদাহরণ: <code>public.ecr.aws/docker/library/node:20</code></p>
+        <p>Login command: <code>aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws</code></p>
+        <p>Region অবশ্যই <code>us-east-1</code> হতে হবে।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৫. CODEBUILD_RESOLVED_SOURCE_VERSION environment variable-এ কী থাকে এবং image tag হিসেবে শুধু প্রথম 8 characters কীভাবে নেবেন?</summary>
+      <div class="answer">
+        <p>এই variable-এ 40-character Git commit ID থাকে। CodePipeline Git source থেকে এটি pass করে।</p>
+        <p>Bash substring syntax:</p>
+        <pre><code>${CODEBUILD_RESOLVED_SOURCE_VERSION:0:8}</code></pre>
+        <p>Format: <code>${VAR:START_INDEX:LENGTH}</code> — index 0 থেকে 8 characters।</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- Chapter Navigation -->
+  <nav class="chapter-nav">
+    <a href="05-cloudformation-deploy-actions-manual-approvals-and-notifications.html" class="chapter-nav-prev">← পূর্ববর্তী: CloudFormation &amp; Approvals</a>
+    <a href="../appendix.html" class="chapter-nav-next">পরবর্তী: Appendix →</a>
+  </nav>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

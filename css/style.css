@@ -1335,3 +1335,52 @@ body.reader-open { overflow: hidden; }
   .cs-step, .cs-rcard { transition: none; }
 }
 
+
+/* ---- Handbooks Dropdown (in main nav) ---- */
+.nav-handbook-dropdown {
+  position: relative;
+  display: inline-block;
+}
+.nav-handbook-toggle {
+  cursor: pointer;
+}
+.nav-handbook-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  min-width: 200px;
+  background: #1a2232;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  z-index: 9999;
+  padding: 4px 0;
+}
+/* Show on hover */
+.nav-handbook-dropdown:hover .nav-handbook-menu {
+  display: block;
+}
+/* Show when toggle has focus (keyboard) */
+.nav-handbook-dropdown:focus-within .nav-handbook-menu {
+  display: block;
+}
+/* Show via JS .open class */
+.nav-handbook-dropdown.open .nav-handbook-menu {
+  display: block;
+}
+.nav-handbook-menu a {
+  display: block;
+  padding: 10px 18px;
+  color: #c8d0dc;
+  text-decoration: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.nav-handbook-menu a:hover {
+  background: #243044;
+  color: #fff;
+}
+  flex-shrink: 0;
+  filter: brightness(0) invert(0.8);
+}

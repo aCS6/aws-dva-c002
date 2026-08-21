@@ -14,3 +14,7 @@ __pycache__/
 question_bank.json
 data/questions_raw.json
 data/questions.json
+
+texts/
+
+prompt-instruction/

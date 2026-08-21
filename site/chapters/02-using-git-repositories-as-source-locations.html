@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chapter 2 — Git Repositories as Source | CodePipeline Handbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+
+<!-- Sidebar Nav -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="../../index.html" class="sidebar-logo" title="← Back to DVA App"><img src="../../media/code-pipeline.svg" alt="" style="width:26px;height:26px;vertical-align:middle;margin-right:8px;filter:brightness(0) invert(1);"><span>CodePipeline<br><small style="font-weight:400;font-size:0.75rem;opacity:0.7;">Handbook</small></span></a><a href="../../index.html" style="display:block;margin-top:8px;font-size:0.74rem;color:#8899aa;text-decoration:none;padding:3px 0;">← DVA-C02 App</a>
+  </div>
+  <ul class="sidebar-nav">
+    <li><a href="../index.html">🏠 হোম</a></li>
+    <li class="nav-section">চ্যাপ্টারসমূহ</li>
+    <li><a href="01-introduction-aws-codepipeline-basics.html">১. CodePipeline Basics</a></li>
+    <li><a href="02-using-git-repositories-as-source-locations.html" class="active">২. Git Repositories as Source</a></li>
+    <li><a href="03-building-your-code-with-aws-codebuild.html">৩. AWS CodeBuild</a></li>
+    <li><a href="04-deploying-to-ec2-instances-with-aws-codedeploy.html">৪. AWS CodeDeploy (EC2)</a></li>
+    <li><a href="05-cloudformation-deploy-actions-manual-approvals-and-notifications.html">৫. CloudFormation, Approvals &amp; Notifications</a></li>
+    <li><a href="06-building-docker-images-ecs-rolling-deployments.html">৬. Docker &amp; ECS Deployments</a></li>
+    <li class="nav-section">রেফারেন্স</li>
+    <li><a href="../appendix.html">📎 Appendix</a></li>
+  </ul>
+</nav>
+
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+
+<main class="main-content">
+  <header class="chapter-header">
+    <div class="chapter-number">Chapter 2</div>
+    <h1>Git Repositories as Source Locations</h1>
+    <p class="chapter-subtitle">AWS CodeCommit deprecation, GitHub connection setup, GitHub থেকে pipeline তৈরি এবং git push দিয়ে automatic deployment trigger করার সম্পূর্ণ গাইড।</p>
+  </header>
+
+  <!-- In-page TOC -->
+  <nav class="toc-box" aria-label="এই পেজে যা আছে">
+    <h2 class="toc-title">এই পেজে যা আছে</h2>
+    <ol class="toc-list">
+      <li><a href="#what-you-will-learn">এই চ্যাপ্টারে যা শিখবেন</a></li>
+      <li><a href="#git-intro">Git ও CodePipeline — পরিচিতি</a></li>
+      <li><a href="#codecommit-deprecation">AWS CodeCommit Deprecation ও GitHub-এ Migration</a></li>
+      <li><a href="#supported-git-providers">Supported Git Providers</a></li>
+      <li><a href="#github-connection-setup">GitHub Connection Setup — AWS Developer Tools</a></li>
+      <li><a href="#github-repo-setup">GitHub Repository তৈরি ও Code Push</a></li>
+      <li><a href="#create-pipeline-github">GitHub Source দিয়ে Pipeline তৈরি করা</a></li>
+      <li><a href="#trigger-by-git-push">Git Push দিয়ে Pipeline Trigger করা</a></li>
+      <li><a href="#key-terms">গুরুত্বপূর্ণ শব্দ</a></li>
+      <li><a href="#summary">সারাংশ</a></li>
+      <li><a href="#self-check">নিজেকে যাচাই করুন</a></li>
+    </ol>
+  </nav>
+
+  <!-- What you'll learn -->
+  <section id="what-you-will-learn">
+    <h2>এই চ্যাপ্টারে যা শিখবেন</h2>
+    <ul>
+      <li>Git-এর মূল concepts: repository, commit, branch, tag, local vs remote।</li>
+      <li>AWS CodeCommit কেন deprecated হলো এবং GitHub কেন replacement হিসেবে ব্যবহার করা হচ্ছে।</li>
+      <li>CodePipeline-এ কোন কোন Git provider supported।</li>
+      <li>AWS Developer Tools-এ GitHub connection (AWS Connector for GitHub) configure করার পদ্ধতি।</li>
+      <li>GitHub repository তৈরি করে initial commit push করা।</li>
+      <li>GitHub (Version 2) source provider দিয়ে pipeline তৈরি করা এবং trigger filter configure করা।</li>
+      <li><code>git commit</code> ও <code>git push</code> দিয়ে pipeline auto-trigger করা।</li>
+    </ul>
+  </section>
+
+  <!-- Section 1: Git Intro -->
+  <section id="git-intro">
+    <h2>Git ও CodePipeline — পরিচিতি</h2>
+
+    <p>S3 bucket source হিসেবে ব্যবহার করা সহজ হলেও, real-world software development-এ team collaboration এবং change tracking-এর জন্য Git repository অপরিহার্য। এই কারণে production pipeline-গুলোতে Git repository-ই primary source হিসেবে ব্যবহার হয়।</p>
+
+    <h3>Git — সংক্ষিপ্ত পরিচিতি</h3>
+    <p>Git হলো একটি open-source, distributed version control system যা 2005 সালে Linux kernel development-এর জন্য তৈরি হয়েছিল। Stack Overflow-এর 2022 survey অনুযায়ী প্রায় 94% developer Git ব্যবহার করেন।</p>
+
+    <dl>
+      <dt><strong>Repository</strong></dt>
+      <dd>Project-এর সব file, folder এবং তাদের change history রাখার জায়গা।</dd>
+
+      <dt><strong>Commit</strong></dt>
+      <dd>Repository-এর একটি সম্পূর্ণ snapshot। Git প্রতিটি commit-এ প্রতিটি file-এর পুরো content সংরক্ষণ করে (শুধু diff নয়)।</dd>
+
+      <dt><strong>Local Repository</strong></dt>
+      <dd>আপনার নিজের computer-এ থাকা repository-র copy। Commit সবার আগে local-এ যায়। এটি Git-কে distributed system বানায়।</dd>
+
+      <dt><strong>Remote Repository</strong></dt>
+      <dd>Internet বা network-এ থাকা shared repository (যেমন GitHub)। <code>git push</code> দিয়ে local change remote-এ পাঠানো হয়।</dd>
+
+      <dt><strong>Branch</strong></dt>
+      <dd>Main code line (master/main) থেকে আলাদা করে কাজ করার ব্যবস্থা। Master branch-এ merge না করা পর্যন্ত পরিবর্তন isolated থাকে।</dd>
+
+      <dt><strong>Tag</strong></dt>
+      <dd>Git history-র একটি নির্দিষ্ট সময়ের reference। সাধারণত software version (যেমন <code>v1.0.0</code>) চিহ্নিত করতে ব্যবহার হয়। Branch-এর মতো নতুন commit যোগ হয় না।</dd>
+    </dl>
+
+    <h3>CodePipeline-এ Git কীভাবে কাজ করে</h3>
+    <p>Remote Git repository-কে pipeline-এর source location হিসেবে configure করলে:</p>
+    <ol>
+      <li>Developer local-এ change করে commit তৈরি করে remote repository-তে push করে।</li>
+      <li>Push event AWS CodePipeline-কে trigger করে।</li>
+      <li>CodePipeline repository থেকে latest code pull করে।</li>
+      <li>Code pipeline stages-এর মধ্য দিয়ে যায় — build, test, deploy।</li>
+    </ol>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    DEV["Developer\ngit commit + push"] -->|push event| GH["GitHub\n(remote repo)"]
+    GH -->|webhook/event| CP["AWS CodePipeline\nSource Stage"]
+    CP -->|SourceArtifact zip| AS["S3 Artifact Store"]
+    AS --> BUILD["Build Stage\n(optional)"]
+    BUILD --> DEPLOY["Deploy Stage"]
+      </div>
+      <p class="diagram-caption">Git push থেকে CodePipeline trigger হয়ে deployment পর্যন্ত flow।</p>
+    </div>
+
+    <h3>Pipeline-এ Branch Strategy</h3>
+    <p>CodePipeline-এ একটি specific branch track করা যায়। সাধারণ pattern:</p>
+    <ul>
+      <li><code>master</code> বা <code>main</code> branch → production pipeline।</li>
+      <li>আলাদা <code>production</code> branch → production deployment পাইপলাইন।</li>
+      <li>Development branch → staging pipeline।</li>
+    </ul>
+    <p>এভাবে development এবং production deployment আলাদা রাখা যায়।</p>
+  </section>
+
+  <!-- Section 2: CodeCommit Deprecation -->
+  <section id="codecommit-deprecation">
+    <h2>AWS CodeCommit Deprecation ও GitHub-এ Migration</h2>
+
+    <p>AWS CodeCommit ছিল AWS-এর নিজস্ব source control service। কিন্তু <strong>July 2024-এর শেষে AWS CodeCommit deprecated করেছে</strong>।</p>
+
+    <div class="callout callout-warning">
+      <strong>গুরুত্বপূর্ণ:</strong> নতুন AWS account-এ আর CodeCommit repository তৈরি করা যাবে না। পুরনো account-এ existing repository থাকতে পারে, তবে নতুন development-এ CodeCommit ব্যবহার না করাই ভালো।
+    </div>
+
+    <p>AWS-এর recommendation হলো GitHub, GitLab বা Bitbucket-এ migrate করা। এই কোর্সে GitHub-কে primary replacement হিসেবে ব্যবহার করা হয়েছে।</p>
+
+    <div class="callout callout-info">
+      <strong>CodeConnections (formerly CodeStar Connections):</strong> AWS Developer Tools-এ third-party Git provider connect করার service-এর নাম "CodeStar Connections" থেকে "CodeConnections"-এ rename করা হচ্ছে। Console-এ যদি "CodeStar" দেখেন, সেটি একই service।
+    </div>
+  </section>
+
+  <!-- Section 3: Supported Git Providers -->
+  <section id="supported-git-providers">
+    <h2>Supported Git Providers</h2>
+
+    <p>AWS CodePipeline বর্তমানে নিচের Git provider support করে:</p>
+
+    <div class="comparison-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Provider</th>
+            <th>Version</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>GitHub</td>
+            <td>Version 2 (recommended)</td>
+            <td>AWS Connector for GitHub app ব্যবহার করে।</td>
+          </tr>
+          <tr>
+            <td>GitHub</td>
+            <td>Version 1 (legacy)</td>
+            <td>OAuth token-based, deprecated — ব্যবহার করবেন না।</td>
+          </tr>
+          <tr>
+            <td>GitHub Enterprise Server</td>
+            <td>—</td>
+            <td>Self-hosted GitHub এর জন্য।</td>
+          </tr>
+          <tr>
+            <td>Atlassian Bitbucket Cloud</td>
+            <td>—</td>
+            <td>Bitbucket Cloud repository support।</td>
+          </tr>
+          <tr>
+            <td>GitLab</td>
+            <td>—</td>
+            <td>GitLab.com এবং GitLab self-managed উভয়ই।</td>
+          </tr>
+          <tr>
+            <td>AWS CodeCommit</td>
+            <td>—</td>
+            <td><strong>Deprecated</strong> — নতুন account-এ ব্যবহার করা যাবে না।</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note">⚠️ AWS সময়ের সাথে নতুন provider যোগ করতে পারে। Latest list-এর জন্য AWS documentation দেখুন।</p>
+  </section>
+
+  <!-- Section 4: GitHub Connection Setup -->
+  <section id="github-connection-setup">
+    <h2>GitHub Connection Setup — AWS Developer Tools</h2>
+
+    <p>Third-party Git provider (যেমন GitHub) থেকে pipeline তৈরি করার আগে AWS account-এ একটি <strong>connection</strong> configure করতে হবে। এই connection AWS Developer Tools-এর Connections section থেকে manage করা হয়।</p>
+
+    <h3>Connection কীভাবে কাজ করে</h3>
+    <p>Connection তৈরি করলে <strong>AWS Connector for GitHub</strong> নামে একটি GitHub App install হয়। এই app AWS-কে GitHub repository থেকে code পড়ার permission দেয়।</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant U as Developer
+    participant AWS as AWS Developer Tools
+    participant GH as GitHub
+
+    U->>AWS: Create Connection (GitHub provider)
+    AWS->>GH: Redirect to GitHub OAuth
+    GH->>U: Request authorization
+    U->>GH: Authorize AWS Connector
+    GH->>AWS: Return to AWS
+    AWS->>U: Install AWS Connector for GitHub App
+    U->>GH: Choose account/org + repo scope
+    GH-->>AWS: App installed
+    U->>AWS: Click "Connect" to finish
+    Note over AWS: Connection status = "Available"
+      </div>
+      <p class="diagram-caption">GitHub connection তৈরির ধাপ — AWS এবং GitHub-এর মধ্যে authorization flow।</p>
+    </div>
+
+    <h3>Connection তৈরির ধাপ</h3>
+    <ol>
+      <li>AWS Management Console-এ CodePipeline Console খুলুন।</li>
+      <li>বাম menu-তে <strong>Settings → Connections</strong> ক্লিক করুন।</li>
+      <li><strong>Create connection</strong> ক্লিক করুন।</li>
+      <li>Provider হিসেবে <strong>GitHub</strong> নির্বাচন করুন।</li>
+      <li>Connection name দিন, যেমন: <code>GitHub connection</code></li>
+      <li><strong>Connect to GitHub</strong> ক্লিক করুন — GitHub-এ redirect হবে।</li>
+      <li>GitHub-এ <strong>Authorize AWS Connector for GitHub</strong> ক্লিক করুন।</li>
+      <li>AWS Developer Tools-এ ফিরে এলে <strong>Install a new app</strong> ক্লিক করুন।</li>
+      <li>GitHub-এ যে account বা organization-এ repository আছে সেটি নির্বাচন করুন।</li>
+      <li>Repository access:
+        <ul>
+          <li><strong>All repositories</strong> — সহজ, ভবিষ্যতে নতুন repo স্বয়ংক্রিয়ভাবে covered।</li>
+          <li><strong>Only select repositories</strong> — নিরাপদ, কিন্তু নতুন repo যোগ করতে reconnect করতে হবে।</li>
+        </ul>
+      </li>
+      <li><strong>Install</strong> ক্লিক করুন।</li>
+      <li>AWS-এ ফিরে <strong>Connect</strong> ক্লিক করুন।</li>
+      <li>Connection-এর status <strong>Available</strong> হলে সফল।</li>
+    </ol>
+
+    <div class="callout callout-info">
+      একটি connection একাধিক pipeline-এ ব্যবহার করা যায়। একই GitHub account-এর জন্য একটি connection-ই যথেষ্ট।
+    </div>
+  </section>
+
+  <!-- Section 5: GitHub Repo Setup -->
+  <section id="github-repo-setup">
+    <h2>GitHub Repository তৈরি ও Code Push</h2>
+
+    <h3>GitHub-এ Repository তৈরি</h3>
+    <ol>
+      <li>GitHub-এ login করুন।</li>
+      <li>নতুন repository তৈরি করুন। Name: <code>my-website-repo</code> (kebab-case convention)।</li>
+      <li>Visibility: <strong>Private</strong> রাখুন।</li>
+      <li><strong>Create repository</strong> ক্লিক করুন।</li>
+    </ol>
+
+    <h3>Local Repository Initialize করা ও Push করা</h3>
+    <p>আপনার project folder-এ terminal খুলুন এবং নিচের command-গুলো চালান:</p>
+
+    <pre><code># ১. Local Git repository initialize করুন
+git init
+
+# ২. সব file stage করুন
+git add .
+
+# ৩. Initial commit তৈরি করুন
+git commit -m "Version 1.0"
+
+# ৪. GitHub repository-কে remote হিসেবে যোগ করুন
+# (GitHub repository page থেকে HTTPS URL কপি করুন)
+git remote add origin https://github.com/YOUR-USERNAME/my-website-repo.git
+
+# ৫. master branch-এ push করুন
+git push origin master</code></pre>
+
+    <div class="callout callout-info">
+      <strong>S3 source-এর সাথে পার্থক্য:</strong> GitHub source-এ zip package তৈরির দরকার নেই। File-গুলো সরাসরি repository-তে রাখুন। CodePipeline নিজেই source code zip করে artifact store-এ রাখে।
+    </div>
+
+    <div class="callout callout-warning">
+      <strong>Git commit message গুরুত্বপূর্ণ:</strong> Source revision-এ commit message দেখা যায়। Pipeline history-তে কোন version কখন deploy হয়েছে বুঝতে সাহায্য করে। অর্থপূর্ণ message ব্যবহার করুন।
+    </div>
+  </section>
+
+  <!-- Section 6: Create Pipeline -->
+  <section id="create-pipeline-github">
+    <h2>GitHub Source দিয়ে Pipeline তৈরি করা</h2>
+
+    <h3>Architecture</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    GH["GitHub Repository\nmaster branch"] -->|git push triggers| CP_SRC["Source Stage\nGitHub v2 Action"]
+    CP_SRC -->|SourceArtifact zip| AS["S3 Artifact Store"]
+    AS --> CP_DEP["Deploy Stage\nS3 Deploy Action\n(extract files)"]
+    CP_DEP --> PROD["S3 Production Bucket\n(static website)"]
+      </div>
+      <p class="diagram-caption">GitHub source pipeline: git push → source pull → S3 deploy।</p>
+    </div>
+
+    <h3>Pipeline তৈরির ধাপ</h3>
+    <ol>
+      <li>CodePipeline Console-এ <strong>Create pipeline</strong> ক্লিক করুন।</li>
+      <li>Pipeline name: <code>MyGitHubPipeline</code></li>
+      <li>Pipeline type: V2, Execution mode: Queued (default)।</li>
+      <li>Service role: New role তৈরি করতে দিন।</li>
+      <li>Artifact store: Default location — বিদ্যমান artifact store bucket ব্যবহার হবে।</li>
+      <li><strong>Next</strong> → Source Stage:</li>
+    </ol>
+
+    <h4>Source Stage — GitHub (Version 2) Configuration</h4>
+    <ul>
+      <li><strong>Source provider:</strong> <strong>GitHub (Version 2)</strong> নির্বাচন করুন।
+        <p class="note">⚠️ "GitHub (Version 1)" OAuth-based এবং deprecated। "GitHub (Version 2)" ব্যবহার করুন যা AWS Connector for GitHub app ব্যবহার করে।</p>
+      </li>
+      <li><strong>Connection:</strong> আগে তৈরি করা GitHub connection নির্বাচন করুন। Status "Ready" দেখালে connection সঠিকভাবে কাজ করছে।</li>
+      <li><strong>Repository name:</strong> আপনার GitHub repository নির্বাচন করুন।
+        <div class="callout callout-warning">যদি repository দেখা না যায়, GitHub-এ "AWS Connector for GitHub" app-এর repository access settings-এ সেই repository যোগ করুন।</div>
+      </li>
+      <li><strong>Default branch:</strong> <code>master</code></li>
+      <li><strong>Output artifact format:</strong> <strong>CodePipeline default</strong> (zip)। অন্য option হলো "Full clone" — এটি শুধুমাত্র CodeBuild action-এ কাজ করে।</li>
+    </ul>
+
+    <h4>Trigger Filter Configuration</h4>
+    <p>Trigger filter দিয়ে কোন Git event-এ pipeline trigger হবে তা নিয়ন্ত্রণ করা যায়:</p>
+
+    <div class="comparison-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Option</th>
+            <th>আচরণ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>No filter (default)</td>
+            <td>configured branch-এ যেকোনো push-এ trigger হয়।</td>
+          </tr>
+          <tr>
+            <td>No triggers</td>
+            <td>Automatic trigger বন্ধ। শুধুমাত্র manually trigger করা যাবে।</td>
+          </tr>
+          <tr>
+            <td>Push → Branch filter</td>
+            <td>নির্দিষ্ট branch include/exclude করে trigger করুন।</td>
+          </tr>
+          <tr>
+            <td>Push → Tag filter</td>
+            <td>নির্দিষ্ট Git tag push হলে trigger হয়।</td>
+          </tr>
+          <tr>
+            <td>Push → File path filter</td>
+            <td>নির্দিষ্ট file path-এ পরিবর্তন হলে trigger হয়।</td>
+          </tr>
+          <tr>
+            <td>Pull Request events</td>
+            <td>PR open/update হলে trigger হয়।</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>এই উদাহরণে filter দেওয়া হয়নি — master branch-এ যেকোনো push pipeline trigger করবে।</p>
+
+    <ol start="7">
+      <li><strong>Next</strong> → Build stage: <strong>Skip build stage → Skip</strong>।</li>
+      <li>Deploy stage: Amazon S3 provider, production bucket, ✅ Extract file before deploy।</li>
+      <li><strong>Next → Create pipeline</strong>।</li>
+    </ol>
+
+    <div class="callout callout-success">
+      Pipeline তৈরি হওয়ার সাথে সাথে GitHub-এর latest commit থেকে automatic execution শুরু হবে।
+    </div>
+
+    <h3>GitHub Source Action-এর বিশেষত্ব</h3>
+    <p>GitHub source-এ S3 source-এর তুলনায় কিছু পার্থক্য আছে:</p>
+    <ul>
+      <li>Source revision-এ S3 version ID-এর বদলে <strong>Git commit ID</strong> এবং <strong>commit message</strong> দেখা যায়।</li>
+      <li>Action details-এ commit link দেওয়া থাকে — click করলে GitHub-এর সেই commit-এ redirect হয়।</li>
+      <li>Input tab-এ GitHub connection ARN, repository ID, branch এবং trigger detection settings দেখা যায়।</li>
+      <li><code>DetectChanges: true</code> মানে automatic trigger enabled।</li>
+    </ul>
+  </section>
+
+  <!-- Section 7: Trigger by Git Push -->
+  <section id="trigger-by-git-push">
+    <h2>Git Push দিয়ে Pipeline Trigger করা</h2>
+
+    <h3>Change করে Push করার ধাপ</h3>
+    <ol>
+      <li>Local-এ <code>index.html</code> বা অন্য file পরিবর্তন করুন।</li>
+      <li>পরিবর্তন save করুন।</li>
+      <li>Terminal-এ নিচের command চালান:</li>
+    </ol>
+
+    <pre><code># ইতিমধ্যে tracked file-এ change করলে -a flag দিয়ে auto-stage করা যায়
+git commit -a -m "Version 2.0"
+
+# Remote repository-তে push করুন
+git push origin master</code></pre>
+
+    <div class="callout callout-info">
+      <code>git commit -a</code> শুধুমাত্র ইতিমধ্যে <strong>tracked</strong> file-এর জন্য কাজ করে। নতুন file যোগ হলে আগে <code>git add filename</code> দিয়ে stage করতে হবে।
+    </div>
+
+    <ol start="4">
+      <li><code>git push</code> সম্পন্ন হওয়ার পরপরই CodePipeline Console-এ Source stage-এর execution time প্রায় "Just now" হয়ে যাবে।</li>
+      <li>Source revision-এ commit message দেখা যাবে।</li>
+    </ol>
+
+    <h3>Execution History-তে Git Trigger</h3>
+    <p>Execution history-তে Git push দিয়ে trigger করা execution-এ:</p>
+    <ul>
+      <li><strong>Trigger:</strong> "Git push" + commit ID দেখা যায়।</li>
+      <li><strong>Source revision:</strong> Commit ID + commit message।</li>
+      <li>Repository link ক্লিক করলে GitHub repository-তে যাওয়া যায়।</li>
+      <li>Timeline-এ source action-এর link ক্লিক করলে সেই specific commit-এ যাওয়া যায়।</li>
+    </ul>
+
+    <p>Pipeline creation-এর execution-এ trigger দেখায় <code>CreatePipeline</code>, এবং manually trigger করলে <code>StartPipelineExecution</code> দেখায়। Git push-এ commit ID সহ "Git push" দেখায়।</p>
+
+    <h3>পরবর্তী সেকশনে কী আসছে</h3>
+    <p>এই সেকশনের পরের সব উদাহরণে GitHub repository থেকেই pipeline trigger হবে। Source provider পরিবর্তন হলেও build এবং deploy stage-এর concept একই থাকে। পরবর্তী section থেকে AWS CodeBuild দিয়ে build stage যোগ করা হবে।</p>
+  </section>
+
+  <!-- Key Terms -->
+  <section id="key-terms">
+    <h2>গুরুত্বপূর্ণ শব্দ</h2>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <dt>Git Repository</dt>
+        <dd>Project files ও change history রাখার জায়গা।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Git Commit</dt>
+        <dd>Repository-এর একটি সম্পূর্ণ snapshot।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Git Branch</dt>
+        <dd>Main code থেকে আলাদা করে কাজ করার পথ।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Git Tag</dt>
+        <dd>History-র নির্দিষ্ট সময়ের reference, সাধারণত version mark করতে।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>git push</dt>
+        <dd>Local commit remote repository-তে পাঠানো।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>AWS Connector for GitHub</dt>
+        <dd>GitHub App যা AWS-কে GitHub repository access দেয়।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>CodeConnections</dt>
+        <dd>AWS Developer Tools-এ third-party connection manage করার service (formerly CodeStar Connections)।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>GitHub (Version 2)</dt>
+        <dd>CodePipeline-এ recommended GitHub source provider, AWS Connector app ব্যবহার করে।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Trigger Filter</dt>
+        <dd>কোন Git event (push, PR, tag) pipeline trigger করবে তার নিয়ম।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>Full Clone</dt>
+        <dd>GitHub source artifact format যা Git metadata সহ full repository clone করে — শুধুমাত্র CodeBuild-এ supported।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>master branch</dt>
+        <dd>Git-এর default primary branch।</dd>
+      </div>
+      <div class="glossary-item">
+        <dt>origin</dt>
+        <dd>Remote repository-র default name convention।</dd>
+      </div>
+    </div>
+  </section>
+
+  <!-- Summary -->
+  <section id="summary">
+    <h2>সারাংশ</h2>
+    <ul>
+      <li>AWS CodeCommit July 2024-এ deprecated হয়েছে। নতুন account-এ GitHub, GitLab বা Bitbucket ব্যবহার করতে হবে।</li>
+      <li>GitHub repository pipeline-এ source হিসেবে ব্যবহার করতে প্রথমে AWS Developer Tools-এ connection তৈরি করতে হবে।</li>
+      <li>Connection-এ "AWS Connector for GitHub" GitHub App install করতে হয়।</li>
+      <li>Pipeline-এ সবসময় <strong>GitHub (Version 2)</strong> provider ব্যবহার করুন — V1 deprecated।</li>
+      <li>Default trigger (no filter) দিলে configured branch-এ যেকোনো push pipeline trigger করে।</li>
+      <li>Source revision-এ Git commit ID ও commit message থাকে — meaningful commit message লেখুন।</li>
+      <li><code>git commit -a -m "message" && git push origin master</code> — এটুকুই pipeline trigger করতে যথেষ্ট।</li>
+    </ul>
+  </section>
+
+  <!-- Self Check -->
+  <section id="self-check">
+    <h2>নিজেকে যাচাই করুন</h2>
+
+    <details>
+      <summary>১. GitHub (Version 1) এবং GitHub (Version 2) source provider-এর মধ্যে মূল পার্থক্য কী?</summary>
+      <div class="answer">
+        <p><strong>Version 1:</strong> OAuth-based token ব্যবহার করে — deprecated, security concern আছে।</p>
+        <p><strong>Version 2:</strong> AWS Connector for GitHub app ব্যবহার করে — recommended, আরো secure, fine-grained repository permission।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>২. GitHub source action-এ "Output artifact format" এর দুটি option কী এবং কখন কোনটি ব্যবহার করবেন?</summary>
+      <div class="answer">
+        <p><strong>CodePipeline default (zip):</strong> Source code zip করে artifact store-এ রাখে। সব action type-এ কাজ করে।</p>
+        <p><strong>Full clone:</strong> Git repository সম্পূর্ণ clone করে Git metadata (commit history, branches) সহ রাখে। শুধুমাত্র <strong>CodeBuild action-এ</strong> supported — যেমন commit ID বা Git history access দরকার হলে।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৩. AWS Connector for GitHub app-এ "All repositories" vs "Only select repositories" — কোনটি বেছে নেওয়া উচিত?</summary>
+      <div class="answer">
+        <p><strong>All repositories:</strong> সহজ setup, ভবিষ্যতে নতুন repository স্বয়ংক্রিয়ভাবে covered। কিন্তু AWS-কে সব repo-তে access দেওয়া হয়।</p>
+        <p><strong>Only select repositories:</strong> Least-privilege principle অনুসরণ করে, কিন্তু নতুন repo যোগ করলে connection reconfigure করতে হবে।</p>
+        <p>Security-conscious environment-এ নির্দিষ্ট repository নির্বাচন ভালো; learning/development-এ all repositories সহজ।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৪. <code>git commit -a</code> flag কখন কাজ করে না?</summary>
+      <div class="answer">
+        <p><code>git commit -a</code> শুধুমাত্র ইতিমধ্যে Git দ্বারা <strong>tracked</strong> file-এ কাজ করে। নতুন file যোগ করলে আগে <code>git add filename</code> বা <code>git add .</code> দিয়ে stage করতে হবে।</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>৫. Trigger filter-এ "No filter" এবং "No triggers" এর পার্থক্য কী?</summary>
+      <div class="answer">
+        <p><strong>No filter:</strong> Automatic trigger <em>enabled</em> — configured branch-এ যেকোনো push pipeline trigger করে।</p>
+        <p><strong>No triggers:</strong> Automatic trigger <em>disabled</em> — pipeline শুধুমাত্র manually (<strong>Release change</strong>) trigger করতে হবে।</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- Chapter Navigation -->
+  <nav class="chapter-nav">
+    <a href="01-introduction-aws-codepipeline-basics.html" class="chapter-nav-prev">← পূর্ববর্তী: CodePipeline Basics</a>
+    <a href="03-building-your-code-with-aws-codebuild.html" class="chapter-nav-next">পরবর্তী: AWS CodeBuild →</a>
+  </nav>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>
